@@ -559,14 +559,37 @@
                     
                     console.log(`📊 LOADDATA: Timeline records: ${timelineData.length}, Prescrizioni records: ${prescrizioniData.length}`);
                     
+                    // JOIN INTELLIGENTE: Gestisce duplicati scegliendo il record più appropriato
                     const prescrizioniMap = {};
                     prescrizioniData.forEach(record => {
                         const codice = record.fields.Codice;
                         if (codice) {
-                            prescrizioniMap[codice] = record.fields;
-                            // Debug specifico per il record che stiamo testando
-                            if (codice === '583E1') {
-                                console.log(`🔍 LOADDATA: Record 583E1 trovato con DataConsegna: ${record.fields.DataConsegna}`);
+                            // Se non esiste ancora, lo aggiungi
+                            if (!prescrizioniMap[codice]) {
+                                prescrizioniMap[codice] = record.fields;
+                                console.log(`📝 LOADDATA: Primo record per ${codice}: DataConsegna=${record.fields.DataConsegna}`);
+                            } else {
+                                // Se esiste già, scegli il migliore con questa logica:
+                                // 1. Preferisci record con DataConsegna più recente
+                                // 2. Se stesso DataConsegna, preferisci il più nuovo (ultimo createdTime)
+                                const esistente = prescrizioniMap[codice];
+                                const nuovoRecord = record.fields;
+                                
+                                const dataEsistente = new Date(esistente.DataConsegna || '1900-01-01');
+                                const dataNuova = new Date(nuovoRecord.DataConsegna || '1900-01-01');
+                                
+                                if (dataNuova > dataEsistente) {
+                                    // Data più recente vince
+                                    prescrizioniMap[codice] = nuovoRecord;
+                                    console.log(`🔄 LOADDATA: Record aggiornato per ${codice}: ${esistente.DataConsegna} → ${nuovoRecord.DataConsegna} (data più recente)`);
+                                } else if (dataNuova.getTime() === dataEsistente.getTime()) {
+                                    // Stessa data: preferisci quello con createdTime più recente
+                                    // (assumiamo che l'ultimo nel forEach sia il più recente)
+                                    prescrizioniMap[codice] = nuovoRecord;
+                                    console.log(`🔄 LOADDATA: Record aggiornato per ${codice}: stesso DataConsegna, preferisco il più recente`);
+                                } else {
+                                    console.log(`⏭️ LOADDATA: Mantengo record esistente per ${codice}: ${esistente.DataConsegna} è più recente di ${nuovoRecord.DataConsegna}`);
+                                }
                             }
                         }
                     });

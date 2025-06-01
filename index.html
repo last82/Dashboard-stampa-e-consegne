@@ -1,15 +1,17 @@
-// Componenti e funzioni principali
-// Migliorie: gestione stato modale, update ottimistico, separazione in componenti
-// N.B.: Non correggo qui la questione sicurezza API (punto 1), solo 2-3-4 come richiesto.
+import React, { useState, useEffect, useCallback } from "react";
 
-import React, { useState, useEffect, useCallback } from 'react';
+// Configurazione Airtable
+const AIRTABLE_BASE_ID = 'appkaYhl810WwG7jf';
+const AIRTABLE_TOKEN = 'patnhoUAqDz44YP5G.bc379a3490a179c8d37c0c9f5ea18d1f0379e901297137c8bc10ede9624b8135';
+const TIMELINE_TABLE = 'tblWW6GJIxgZR8hp8';
+const PRESCRIZIONI_TABLE = 'tblM2RwtcSmfw7OTs';
 
-// API helpers (puoi poi spostarli in un file separato)
+// Helpers API
 const fetchAirtableData = async (baseId, table, token) => {
   const response = await fetch(`https://api.airtable.com/v0/${baseId}/${table}`, {
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
     }
   });
   const data = await response.json();
@@ -17,25 +19,28 @@ const fetchAirtableData = async (baseId, table, token) => {
 };
 
 const updateAirtableRecord = async (baseId, table, token, recordId, fields) => {
-  const response = await fetch(`https://api.airtable.com/v0/${baseId}/${table}/${recordId}`, {
-    method: 'PATCH',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ fields })
-  });
+  const response = await fetch(
+    `https://api.airtable.com/v0/${baseId}/${table}/${recordId}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ fields })
+    }
+  );
   return await response.json();
 };
 
-// Modale controllata via React state
-function ModaleDettaglio({ open, lavoro, onSave, onClose }) {
-  const [path, setPath] = useState(lavoro?.PathFileCAD || '');
-  const [note, setNote] = useState(lavoro?.NoteStampa || '');
+// Modale dettagli controllata
+function ModalDettaglio({ open, lavoro, onSave, onClose }) {
+  const [path, setPath] = useState(lavoro?.PathFileCAD || "");
+  const [note, setNote] = useState(lavoro?.NoteStampa || "");
 
   useEffect(() => {
-    setPath(lavoro?.PathFileCAD || '');
-    setNote(lavoro?.NoteStampa || '');
+    setPath(lavoro?.PathFileCAD || "");
+    setNote(lavoro?.NoteStampa || "");
   }, [lavoro]);
 
   if (!open || !lavoro) return null;
@@ -43,10 +48,12 @@ function ModaleDettaglio({ open, lavoro, onSave, onClose }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <h3 className="text-lg font-bold mb-4">Dettagli Lavoro {lavoro.CodicePaziente}</h3>
+        <h3 className="text-lg font-bold mb-4">
+          Dettagli Lavoro {lavoro.CodicePaziente}
+        </h3>
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2">Path File CAD:</label>
-          <input 
+          <input
             type="text"
             value={path}
             onChange={e => setPath(e.target.value)}
@@ -56,7 +63,7 @@ function ModaleDettaglio({ open, lavoro, onSave, onClose }) {
         </div>
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2">Note Stampa:</label>
-          <textarea 
+          <textarea
             value={note}
             onChange={e => setNote(e.target.value)}
             className="w-full border rounded px-3 py-2 h-24"
@@ -64,29 +71,38 @@ function ModaleDettaglio({ open, lavoro, onSave, onClose }) {
           />
         </div>
         <div className="flex justify-end space-x-2">
-          <button 
+          <button
             onClick={onClose}
             className="px-4 py-2 border rounded hover:bg-gray-50"
-          >Annulla</button>
-          <button 
+          >
+            Annulla
+          </button>
+          <button
             onClick={() => onSave({ PathFileCAD: path, NoteStampa: note })}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >Salva</button>
+          >
+            Salva
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-// Card lavoro - estratta come componente
-function CardLavoro({ lavoro, steps, daysUntil, onStepClick, onStatusChange, onOpenModal }) {
-  // ... Logica visuale simile all'originale, omessa qui per brevità ...
+// Card lavoro semplice
+function CardLavoro({ lavoro, onOpenModal }) {
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500 card-hover">
-      {/* ...intestazione... */}
+    <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500 card-hover mb-2">
       <div className="flex justify-between items-center">
-        {/* ...select e pulsanti... */}
-        <button onClick={onOpenModal} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs">
+        <div>
+          <h3 className="text-lg font-bold text-gray-900">{lavoro.CodicePaziente}</h3>
+          <div className="text-xs text-gray-600">{lavoro.Laboratorio} – {lavoro.TipoLavoro}</div>
+          <div className="text-xs text-gray-600">Data consegna: {lavoro.DataConsegna}</div>
+        </div>
+        <button
+          onClick={onOpenModal}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
+        >
           <i className="fas fa-edit mr-1"></i>Dettagli
         </button>
       </div>
@@ -94,37 +110,124 @@ function CardLavoro({ lavoro, steps, daysUntil, onStepClick, onStatusChange, onO
   );
 }
 
-// Dashboard semplificata (solo parte gestione stato/modale/update)
-function Dashboard() {
-  // Config: importala da env o costanti
-  const AIRTABLE_BASE_ID = '...';
-  const AIRTABLE_TOKEN = '...';
-  const TIMELINE_TABLE = '...';
-  const PRESCRIZIONI_TABLE = '...';
+// Calendario drag&drop, ottimistico
+function CalendarioNavigabile({ lavori, onUpdateDataConsegna, giorni }) {
+  const [dragged, setDragged] = useState(null);
 
+  const handleDragStart = lavoro => setDragged(lavoro);
+  const handleDragEnd = () => setDragged(null);
+
+  const handleDragOver = e => e.preventDefault();
+
+  const handleDrop = async (e, giorno) => {
+    e.preventDefault();
+    if (!dragged) return;
+    await onUpdateDataConsegna(dragged, giorno);
+    setDragged(null);
+  };
+
+  return (
+    <div className="grid grid-cols-7 gap-2">
+      {giorni.map(dateStr => (
+        <div
+          key={dateStr}
+          onDragOver={handleDragOver}
+          onDrop={e => handleDrop(e, dateStr)}
+          className="min-h-[80px] border rounded-lg p-2 bg-white"
+        >
+          <div className="text-center text-xs font-semibold mb-1">{dateStr}</div>
+          <div className="space-y-1">
+            {lavori.filter(l => l.DataConsegna === dateStr).map(lavoro => (
+              <div
+                key={lavoro.id}
+                draggable
+                onDragStart={() => handleDragStart(lavoro)}
+                onDragEnd={handleDragEnd}
+                className="bg-blue-500 text-white rounded px-2 py-1 text-xs cursor-move"
+              >
+                {lavoro.CodicePaziente}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Dashboard() {
   const [lavori, setLavori] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedLavoro, setSelectedLavoro] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
+  // Giorni per la griglia calendario (esempio: -10 a +10 giorni rispetto ad oggi)
+  const giorni = Array.from({ length: 21 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - 10 + i);
+    return d.toISOString().slice(0, 10);
+  });
+
+  // Caricamento dati
   const loadData = useCallback(async () => {
     setLoading(true);
     const timelineData = await fetchAirtableData(AIRTABLE_BASE_ID, TIMELINE_TABLE, AIRTABLE_TOKEN);
-    // ...unisci dati prescrizioni...
-    setLavori(timelineData.map(record => ({
-      // ...mapping...
-      id: record.id,
-      CodicePaziente: record.fields.CodicePaziente,
-      PathFileCAD: record.fields.PathFileCAD,
-      NoteStampa: record.fields.NoteStampa,
-      // ...altro...
-    })));
+    const prescrizioniData = await fetchAirtableData(AIRTABLE_BASE_ID, PRESCRIZIONI_TABLE, AIRTABLE_TOKEN);
+    const prescrizioniMap = {};
+    prescrizioniData.forEach(record => {
+      const codice = record.fields.Codice;
+      if (codice) prescrizioniMap[codice] = record.fields;
+    });
+    setLavori(
+      timelineData.map(record => {
+        const codice = record.fields.CodicePaziente;
+        const prescrizione = prescrizioniMap[codice] || {};
+        return {
+          id: record.id,
+          airtableId: record.id,
+          CodicePaziente: codice || 'N/A',
+          DataConsegna: prescrizione.DataConsegna || null,
+          Laboratorio: prescrizione.Laboratorio || 'Non specificato',
+          TipoLavoro: prescrizione.TipoLavoro || '3D',
+          PathFileCAD: record.fields.PathFileCAD || '',
+          NoteStampa: record.fields.NoteStampa || '',
+        };
+      })
+    );
     setLoading(false);
-  }, [AIRTABLE_BASE_ID, TIMELINE_TABLE, AIRTABLE_TOKEN]);
+  }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-  // Update ottimistico locale + patch
+  // Update ottimistico + PATCH su Airtable
+  const updateDataConsegna = async (lavoro, newDateStr) => {
+    setLavori(prev => prev.map(l =>
+      l.id === lavoro.id ? { ...l, DataConsegna: newDateStr } : l
+    ));
+    try {
+      const prescrizioni = await fetchAirtableData(AIRTABLE_BASE_ID, PRESCRIZIONI_TABLE, AIRTABLE_TOKEN);
+      const recordPrescrizione = prescrizioni.find(r => r.fields.Codice === lavoro.CodicePaziente);
+      if (recordPrescrizione) {
+        await updateAirtableRecord(
+          AIRTABLE_BASE_ID,
+          PRESCRIZIONI_TABLE,
+          AIRTABLE_TOKEN,
+          recordPrescrizione.id,
+          { DataConsegna: newDateStr }
+        );
+      } else {
+        await loadData();
+        alert('Record prescrizione non trovato');
+      }
+    } catch (err) {
+      await loadData();
+      alert("Errore nel salvataggio su Airtable");
+    }
+  };
+
+  // Modale dettagli (update ottimistico locale + patch)
   const handleSaveModal = async (updateFields) => {
     if (!selectedLavoro) return;
     setShowModal(false);
@@ -140,32 +243,40 @@ function Dashboard() {
         updateFields
       );
     } catch (e) {
-      // rollback se errore
       await loadData();
-      alert('Errore nel salvataggio');
+      alert("Errore nel salvataggio dettagli");
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ...header... */}
-      <div className="space-y-3">
-        {lavori.map(lavoro => (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <h1 className="text-2xl font-bold mb-4">🦷 Dashboard Prescrizioni 3D</h1>
+
+      <div className="mb-6">
+        <CalendarioNavigabile
+          lavori={lavori}
+          onUpdateDataConsegna={updateDataConsegna}
+          giorni={giorni}
+        />
+      </div>
+
+      <h2 className="text-lg font-bold mb-2">Tutti i lavori</h2>
+      {loading ? (
+        <div>Caricamento...</div>
+      ) : (
+        lavori.map(lavoro => (
           <CardLavoro
             key={lavoro.id}
             lavoro={lavoro}
-            steps={{}} // ...passa steps se serve...
-            daysUntil={null} // ...calcola giorni...
-            onStepClick={() => {}}
-            onStatusChange={() => {}}
             onOpenModal={() => {
               setSelectedLavoro(lavoro);
               setShowModal(true);
             }}
           />
-        ))}
-      </div>
-      <ModaleDettaglio
+        ))
+      )}
+
+      <ModalDettaglio
         open={showModal}
         lavoro={selectedLavoro}
         onSave={handleSaveModal}
@@ -175,6 +286,4 @@ function Dashboard() {
   );
 }
 
-// Export Dashboard per React app
 export default Dashboard;
-

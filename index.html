@@ -549,6 +549,7 @@
             const [showModal, setShowModal] = useState(false);
 
             const loadData = useCallback(async () => {
+                console.log(`🔄 LOADDATA: Inizio caricamento dati...`);
                 setLoading(true);
                 try {
                     const [timelineData, prescrizioniData] = await Promise.all([
@@ -556,11 +557,17 @@
                         fetchAirtableData(AIRTABLE_BASE_ID, PRESCRIZIONI_TABLE, AIRTABLE_TOKEN)
                     ]);
                     
+                    console.log(`📊 LOADDATA: Timeline records: ${timelineData.length}, Prescrizioni records: ${prescrizioniData.length}`);
+                    
                     const prescrizioniMap = {};
                     prescrizioniData.forEach(record => {
                         const codice = record.fields.Codice;
                         if (codice) {
                             prescrizioniMap[codice] = record.fields;
+                            // Debug specifico per il record che stiamo testando
+                            if (codice === '583E1') {
+                                console.log(`🔍 LOADDATA: Record 583E1 trovato con DataConsegna: ${record.fields.DataConsegna}`);
+                            }
                         }
                     });
                     
@@ -568,7 +575,7 @@
                         const codice = record.fields.CodicePaziente;
                         const prescrizione = prescrizioniMap[codice] || {};
                         
-                        return {
+                        const formatted = {
                             id: record.id,
                             airtableId: record.id,
                             CodicePaziente: codice || 'N/A',
@@ -585,6 +592,17 @@
                             NoteStampa: record.fields.NoteStampa || '',
                             Archiviato: record.fields.Archiviato || false
                         };
+                        
+                        // Debug specifico per il record che stiamo testando
+                        if (codice === '583E1') {
+                            console.log(`🔍 LOADDATA: Lavoro 583E1 formattato:`, {
+                                id: formatted.id,
+                                DataConsegna: formatted.DataConsegna,
+                                prescrizioneOriginale: prescrizione.DataConsegna
+                            });
+                        }
+                        
+                        return formatted;
                     });
                     
                     const attivi = formattedData.filter(l => !l.Archiviato);
@@ -596,10 +614,12 @@
                         return dateA - dateB;
                     };
                     
+                    console.log(`✅ LOADDATA: Dati caricati - Attivi: ${attivi.length}, Archiviati: ${archiviati.length}`);
+                    
                     setLavori(attivi.sort(sortByDate));
                     setLavoriArchiviati(archiviati.sort(sortByDate));
                 } catch (err) {
-                    console.error('Errore caricamento:', err);
+                    console.error('❌ LOADDATA: Errore caricamento:', err);
                 }
                 setLoading(false);
             }, []);

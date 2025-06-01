@@ -382,29 +382,37 @@
                     const lavoro = lavori.find(l => l.id === lavoroId);
                     if (!lavoro) return;
 
-                    // Trova e aggiorna il record nella tabella Prescrizioni
+                    // 1. Aggiornamento locale immediato (feedback UX)
+                    setLavori(prev => prev.map(l => 
+                        l.id === lavoroId ? { ...l, DataConsegna: newDate } : l
+                    ));
+
+                    // 2. Salva su Airtable
                     const prescrizioniData = await fetchAirtableData(PRESCRIZIONI_TABLE);
                     const prescrizioneRecord = prescrizioniData.find(record => 
                         record.fields.Codice === lavoro.CodicePaziente
                     );
 
                     if (prescrizioneRecord) {
-                        // Aggiorna la tabella Prescrizioni (che contiene DataConsegna)
                         await updateAirtableRecord(PRESCRIZIONI_TABLE, prescrizioneRecord.id, {
                             DataConsegna: newDate
                         });
                         
-                        // Aggiorna lo stato locale immediatamente
-                        setLavori(prev => prev.map(l => 
-                            l.id === lavoroId ? { ...l, DataConsegna: newDate } : l
-                        ));
+                        console.log(`✅ Data salvata su Airtable per ${lavoro.CodicePaziente}: ${newDate}`);
                         
-                        console.log(`✅ Data aggiornata per ${lavoro.CodicePaziente}: ${newDate}`);
+                        // 3. Ricarica automaticamente da Airtable (single source of truth)
+                        await loadData();
+                        
                     } else {
                         console.error('❌ Record prescrizione non trovato per:', lavoro.CodicePaziente);
+                        // Rollback: ricarica da Airtable per ripristinare stato originale
+                        await loadData();
+                        throw new Error('Record non trovato');
                     }
                 } catch (error) {
                     console.error('❌ Errore aggiornamento data:', error);
+                    // Rollback: ricarica da Airtable in caso di errore
+                    await loadData();
                     throw error;
                 }
             };

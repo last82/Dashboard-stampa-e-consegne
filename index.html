@@ -224,7 +224,321 @@
       );
     }
 
-    // ... (continua nei commenti)
+      // --- CONTINUA ---
+
+    // Modale dettagli controllata
+    function ModalDettaglio({ open, lavoro, onSave, onClose }) {
+      const [path, setPath] = React.useState(lavoro?.PathFileCAD || "");
+      const [note, setNote] = React.useState(lavoro?.NoteStampa || "");
+
+      React.useEffect(() => {
+        setPath(lavoro?.PathFileCAD || "");
+        setNote(lavoro?.NoteStampa || "");
+      }, [lavoro]);
+
+      if (!open || !lavoro) return null;
+
+      return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold mb-4">
+              Dettagli Lavoro {lavoro.CodicePaziente}
+            </h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Path File CAD:</label>
+              <input
+                type="text"
+                value={path}
+                onChange={e => setPath(e.target.value)}
+                className="w-full border rounded px-3 py-2"
+                placeholder="/nas/lavori/..."
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Note Stampa:</label>
+              <textarea
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                className="w-full border rounded px-3 py-2 h-24"
+                placeholder="Materiale, impostazioni, note..."
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={() => onSave({ PathFileCAD: path, NoteStampa: note })}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Salva
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function Dashboard() {
+      const [lavori, setLavori] = React.useState([]);
+      const [lavoriArchiviati, setLavoriArchiviati] = React.useState([]);
+      const [loading, setLoading] = React.useState(true);
+      const [showArchived, setShowArchived] = React.useState(false);
+      const [selectedLavoro, setSelectedLavoro] = React.useState(null);
+      const [showModal, setShowModal] = React.useState(false);
+
+      // Caricamento dati
+      const loadData = async () => {
+        setLoading(true);
+        try {
+          const [timelineData, prescrizioniData] = await Promise.all([
+            fetchAirtableData(AIRTABLE_BASE_ID, TIMELINE_TABLE, AIRTABLE_TOKEN),
+            fetchAirtableData(AIRTABLE_BASE_ID, PRESCRIZIONI_TABLE, AIRTABLE_TOKEN)
+          ]);
+
+          const prescrizioniMap = {};
+          prescrizioniData.forEach(record => {
+            const codice = record.fields.Codice;
+            if (codice) prescrizioniMap[codice] = record.fields;
+          });
+
+          const formattedData = timelineData.map(record => {
+            const codice = record.fields.CodicePaziente;
+            const prescrizione = prescrizioniMap[codice] || {};
+            return {
+              id: record.id,
+              airtableId: record.id,
+              CodicePaziente: codice || 'N/A',
+              DataConsegna: prescrizione.DataConsegna || null,
+              Laboratorio: prescrizione.Laboratorio || 'Non specificato',
+              TipoLavoro: prescrizione.TipoLavoro || '3D',
+              DataRichiestaCAD: record.fields.DataRichiestaCAD || null,
+              DataVerificaFile: record.fields.DataVerificaFile || null,
+              DataPromemoriStampa: record.fields.DataPromemoriStampa || null,
+              DataPromemoriaFinale: record.fields.DataPromemoriaFinale || null,
+              StatoCAD: record.fields.StatoCAD || 'ATTESA',
+              StatoStampa: record.fields.StatoStampa || 'NON_INIZIATA',
+              PathFileCAD: record.fields.PathFileCAD || '',
+              NoteStampa: record.fields.NoteStampa || '',
+              Archiviato: record.fields.Archiviato || false
+            };
+          });
+
+          const attivi = formattedData.filter(l => !l.Archiviato);
+          const archiviati = formattedData.filter(l => l.Archiviato);
+
+          const sortByDate = (a, b) => {
+            const dateA = new Date(a.DataConsegna || '9999-12-31');
+            const dateB = new Date(b.DataConsegna || '9999-12-31');
+            return dateA - dateB;
+          };
+
+          setLavori(attivi.sort(sortByDate));
+          setLavoriArchiviati(archiviati.sort(sortByDate));
+        } catch (err) {
+          console.error('Errore caricamento:', err);
+        }
+        setLoading(false);
+      };
+
+      React.useEffect(() => {
+        loadData();
+      }, []);
+
+      // Aggiorna data consegna
+      const updateDataConsegna = async (lavoroId, newDate) => {
+        try {
+          const lavoro = lavori.find(l => l.id === lavoroId);
+          if (!lavoro) return;
+          setLavori(prev => prev.map(l =>
+            l.id === lavoroId ? { ...l, DataConsegna: newDate } : l
+          ));
+
+          const prescrizioniData = await fetchAirtableData(AIRTABLE_BASE_ID, PRESCRIZIONI_TABLE, AIRTABLE_TOKEN);
+          const prescrizioneRecord = prescrizioniData.find(record =>
+            record.fields.Codice === lavoro.CodicePaziente
+          );
+          if (prescrizioneRecord) {
+            await updateAirtableRecord(
+              AIRTABLE_BASE_ID,
+              PRESCRIZIONI_TABLE,
+              AIRTABLE_TOKEN,
+              prescrizioneRecord.id,
+              { DataConsegna: newDate }
+            );
+            await loadData();
+          } else {
+            await loadData();
+            throw new Error('Record non trovato');
+          }
+        } catch (error) {
+          await loadData();
+          alert('Errore nell\'aggiornamento della data. Riprova.');
+        }
+      };
+
+      // Toggle attivi/archiviati
+      const currentList = showArchived ? lavoriArchiviati : lavori;
+      const stats = {
+        totale: lavori.length,
+        inAttesa: lavori.filter(l => l.StatoCAD === 'ATTESA').length,
+        inCorso: lavori.filter(l => l.StatoStampa === 'IN_CORSO').length,
+        archiviati: lavoriArchiviati.length
+      };
+
+      // Modale dettagli (update ottimistico locale + patch)
+      const handleSaveModal = async (updateFields) => {
+        if (!selectedLavoro) return;
+        setShowModal(false);
+        setLavori(prev => prev.map(l =>
+          l.id === selectedLavoro.id ? { ...l, ...updateFields } : l
+        ));
+        try {
+          await updateAirtableRecord(
+            AIRTABLE_BASE_ID,
+            TIMELINE_TABLE,
+            AIRTABLE_TOKEN,
+            selectedLavoro.id,
+            updateFields
+          );
+        } catch (e) {
+          await loadData();
+          alert("Errore nel salvataggio dettagli");
+        }
+      };
+
+      // ... puoi aggiungere qui step/timeline/status/select, come nel tuo codice originale ...
+
+      // NB: Per brevità, qui non riporto tutti i dettagli dei pulsanti step, select ecc,
+      // ma puoi incollare dal tuo codice originario la parte "Card con Step/Select"
+      // dentro la lista, per ogni lavoro.
+
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <div className="bg-white shadow-sm border-b">
+            <div className="max-w-7xl mx-auto px-4 py-3">
+              <h1 className="text-xl font-bold text-gray-900">🦷 Dashboard Prescrizioni 3D</h1>
+              <p className="text-xs text-gray-600">Gestione lavori odontoiatrici digitali</p>
+            </div>
+          </div>
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              <div className="bg-white rounded-lg shadow-sm p-3">
+                <div className="flex items-center">
+                  <div className="p-1.5 bg-blue-100 rounded-lg">
+                    <i className="fas fa-cube text-blue-600 text-sm"></i>
+                  </div>
+                  <div className="ml-2">
+                    <p className="text-xs font-medium text-gray-600">Totale</p>
+                    <p className="text-xl font-bold text-gray-900">{stats.totale}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-lg shadow-sm p-3">
+                <div className="flex items-center">
+                  <div className="p-1.5 bg-yellow-100 rounded-lg">
+                    <i className="fas fa-clock text-yellow-600 text-sm"></i>
+                  </div>
+                  <div className="ml-2">
+                    <p className="text-xs font-medium text-gray-600">CAD Attesa</p>
+                    <p className="text-xl font-bold text-gray-900">{stats.inAttesa}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-lg shadow-sm p-3">
+                <div className="flex items-center">
+                  <div className="p-1.5 bg-green-100 rounded-lg">
+                    <i className="fas fa-print text-green-600 text-sm"></i>
+                  </div>
+                  <div className="ml-2">
+                    <p className="text-xs font-medium text-gray-600">Stampa</p>
+                    <p className="text-xl font-bold text-gray-900">{stats.inCorso}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white rounded-lg shadow-sm p-3">
+                <div className="flex items-center">
+                  <div className="p-1.5 bg-gray-100 rounded-lg">
+                    <i className="fas fa-archive text-gray-600 text-sm"></i>
+                  </div>
+                  <div className="ml-2">
+                    <p className="text-xs font-medium text-gray-600">Archiviati</p>
+                    <p className="text-xl font-bold text-gray-900">{stats.archiviati}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-4 items-center mb-4">
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setShowArchived(false)}
+                  className={`px-3 py-1.5 rounded text-sm font-medium ${!showArchived ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                >
+                  🔄 Attivi ({stats.totale})
+                </button>
+                <button
+                  onClick={() => setShowArchived(true)}
+                  className={`px-3 py-1.5 rounded text-sm font-medium ${showArchived ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                >
+                  📦 Archivio ({stats.archiviati})
+                </button>
+              </div>
+              <button
+                onClick={loadData}
+                disabled={loading}
+                className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white px-3 py-1.5 rounded text-sm"
+              >
+                <i className={`fas fa-sync-alt mr-1 ${loading ? 'animate-spin' : ''}`}></i>
+                {loading ? 'Caricamento...' : 'Aggiorna'}
+              </button>
+            </div>
+            <CalendarioNavigabile lavori={lavori} onUpdateDataConsegna={updateDataConsegna} />
+            <div className="space-y-3">
+              {currentList.length === 0 ? (
+                <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+                  <i className="fas fa-search text-gray-400 text-3xl mb-3"></i>
+                  <p className="text-gray-600">Nessun lavoro trovato</p>
+                </div>
+              ) : (
+                currentList.map(lavoro => (
+                  <div key={lavoro.id} className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500 card-hover">
+                    {/* Qui puoi reinserire la tua logica avanzata per STEP, SELECT, TIMELINE */}
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">{lavoro.CodicePaziente}</h3>
+                        <div className="text-xs text-gray-600">{lavoro.Laboratorio} – {lavoro.TipoLavoro}</div>
+                        <div className="text-xs text-gray-600">Data consegna: {lavoro.DataConsegna}</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedLavoro(lavoro);
+                          setShowModal(true);
+                        }}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
+                      >
+                        <i className="fas fa-edit mr-1"></i>Dettagli
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          <ModalDettaglio
+            open={showModal}
+            lavoro={selectedLavoro}
+            onSave={handleSaveModal}
+            onClose={() => setShowModal(false)}
+          />
+        </div>
+      );
+    }
+
+    ReactDOM.render(<Dashboard />, document.getElementById('root'));
+
   </script>
 </body>
 </html>

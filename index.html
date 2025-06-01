@@ -608,40 +608,61 @@
                 loadData();
             }, [loadData]);
 
-            // Aggiornamento data consegna con approccio centralizzato
+            // Aggiornamento data consegna con approccio centralizzato e debug
             const updateDataConsegna = useCallback(async (lavoroId, newDate) => {
+                console.log(`🔄 INIZIO aggiornamento data per lavoro ${lavoroId} → ${newDate}`);
+                
                 try {
                     const lavoro = lavori.find(l => l.id === lavoroId);
-                    if (!lavoro) return;
+                    if (!lavoro) {
+                        console.error('❌ Lavoro non trovato:', lavoroId);
+                        return;
+                    }
+
+                    console.log(`📋 Lavoro trovato: ${lavoro.CodicePaziente}, DataConsegna attuale: ${lavoro.DataConsegna}`);
 
                     // 1. Update ottimistico locale
-                    setLavori(prev => prev.map(l => 
-                        l.id === lavoroId ? { ...l, DataConsegna: newDate } : l
-                    ));
+                    setLavori(prev => {
+                        const updated = prev.map(l => 
+                            l.id === lavoroId ? { ...l, DataConsegna: newDate } : l
+                        );
+                        console.log(`🔄 State locale aggiornato per ${lavoro.CodicePaziente}`);
+                        return updated;
+                    });
 
-                    // 2. Salva su Airtable
+                    // 2. Cerca il record nella tabella Prescrizioni
+                    console.log(`🔍 Cercando record prescrizione per codice: ${lavoro.CodicePaziente}`);
                     const prescrizioniData = await fetchAirtableData(AIRTABLE_BASE_ID, PRESCRIZIONI_TABLE, AIRTABLE_TOKEN);
                     const prescrizioneRecord = prescrizioniData.find(record => 
                         record.fields.Codice === lavoro.CodicePaziente
                     );
 
                     if (prescrizioneRecord) {
-                        await updateAirtableRecord(AIRTABLE_BASE_ID, PRESCRIZIONI_TABLE, AIRTABLE_TOKEN, prescrizioneRecord.id, {
+                        console.log(`✅ Record trovato in Prescrizioni: ${prescrizioneRecord.id}`);
+                        console.log(`📝 Data attuale in Airtable: ${prescrizioneRecord.fields.DataConsegna}`);
+                        
+                        // 3. Aggiorna Airtable
+                        const result = await updateAirtableRecord(AIRTABLE_BASE_ID, PRESCRIZIONI_TABLE, AIRTABLE_TOKEN, prescrizioneRecord.id, {
                             DataConsegna: newDate
                         });
                         
-                        console.log(`✅ Data salvata su Airtable per ${lavoro.CodicePaziente}: ${newDate}`);
+                        console.log(`✅ Airtable aggiornato:`, result);
+                        console.log(`🎯 Data salvata su Airtable per ${lavoro.CodicePaziente}: ${newDate}`);
                         
-                        // 3. Ricarica automaticamente da Airtable (single source of truth)
-                        await loadData();
+                        // 4. EVITA il reload automatico - mantieni solo state locale
+                        // await loadData(); // ← COMMENTO QUESTO per evitare override
                         
                     } else {
-                        console.error('❌ Record prescrizione non trovato per:', lavoro.CodicePaziente);
+                        console.error(`❌ Record prescrizione NON trovato per: ${lavoro.CodicePaziente}`);
+                        console.log(`📋 Records disponibili:`, prescrizioniData.map(r => r.fields.Codice));
+                        
+                        // Rollback solo se record non esiste
                         await loadData();
                         throw new Error('Record non trovato');
                     }
                 } catch (error) {
                     console.error('❌ Errore aggiornamento data:', error);
+                    // Rollback solo in caso di errore reale
                     await loadData();
                     throw error;
                 }
@@ -809,12 +830,15 @@
                 const isCompleted = steps[`step${stepNumber}`];
                 
                 if (lavoro.TipoLavoro === '3D' && stepNumber === 3) {
+                    // Fix per pallino stampa - tutti i casi coperti
                     if (lavoro.StatoStampa === 'IN_CORSO') {
-                        return 'bg-orange-500';
+                        return 'bg-orange-500'; // Arancione per "in corso"
                     } else if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
-                        return 'bg-green-500';
+                        return 'bg-green-500'; // Verde per "completata"
+                    } else if (lavoro.StatoStampa === 'NON_INIZIATA') {
+                        return 'bg-gray-500'; // Grigio per "non iniziata" - FIX: era mancante!
                     } else {
-                        return 'bg-gray-500';
+                        return 'bg-gray-500'; // Default grigio
                     }
                 }
                 
@@ -926,10 +950,10 @@
                                 <button 
                                     onClick={loadData}
                                     disabled={loading}
-                                    className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white px-3 py-1.5 rounded text-sm"
+                                    className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white px-3 py-1.5 rounded text-sm"
                                 >
                                     <i className={`fas fa-sync-alt mr-1 ${loading ? 'animate-spin' : ''}`}></i>
-                                    {loading ? 'Caricamento...' : 'Aggiorna'}
+                                    {loading ? 'Caricamento...' : 'Ricarica da Airtable'}
                                 </button>
                             </div>
                         </div>

@@ -95,9 +95,9 @@
             const startDate = new Date(firstDay);
             startDate.setDate(startDate.getDate() - firstDay.getDay());
 
-            // Genera array di giorni (6 settimane = 42 giorni)
+            // Genera array di giorni (3 settimane = 21 giorni)
             const days = [];
-            for (let i = 0; i < 42; i++) {
+            for (let i = 0; i < 21; i++) {
                 const date = new Date(startDate);
                 date.setDate(startDate.getDate() + i);
                 days.push(date);
@@ -382,22 +382,29 @@
                     const lavoro = lavori.find(l => l.id === lavoroId);
                     if (!lavoro) return;
 
+                    // Trova e aggiorna il record nella tabella Prescrizioni
                     const prescrizioniData = await fetchAirtableData(PRESCRIZIONI_TABLE);
                     const prescrizioneRecord = prescrizioniData.find(record => 
                         record.fields.Codice === lavoro.CodicePaziente
                     );
 
                     if (prescrizioneRecord) {
+                        // Aggiorna la tabella Prescrizioni (che contiene DataConsegna)
                         await updateAirtableRecord(PRESCRIZIONI_TABLE, prescrizioneRecord.id, {
                             DataConsegna: newDate
                         });
                         
+                        // Aggiorna lo stato locale immediatamente
                         setLavori(prev => prev.map(l => 
                             l.id === lavoroId ? { ...l, DataConsegna: newDate } : l
                         ));
+                        
+                        console.log(`✅ Data aggiornata per ${lavoro.CodicePaziente}: ${newDate}`);
+                    } else {
+                        console.error('❌ Record prescrizione non trovato per:', lavoro.CodicePaziente);
                     }
                 } catch (error) {
-                    console.error('Errore aggiornamento data:', error);
+                    console.error('❌ Errore aggiornamento data:', error);
                     throw error;
                 }
             };

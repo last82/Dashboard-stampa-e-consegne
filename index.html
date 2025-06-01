@@ -189,8 +189,21 @@
             };
 
             const getDeliveriesForDate = (date) => {
-                const dateStr = date.toISOString().split('T')[0];
-                return lavori.filter(lavoro => lavoro.DataConsegna === dateStr);
+                // Fix timezone: usa date locali invece di ISO per evitare shift
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${day}`;
+                
+                console.log(`🗓️ Cerca consegne per data: ${dateStr} (era: ${date.toISOString().split('T')[0]})`);
+                
+                return lavori.filter(lavoro => {
+                    const match = lavoro.DataConsegna === dateStr;
+                    if (match) {
+                        console.log(`✅ Trovato lavoro ${lavoro.CodicePaziente} per data ${dateStr}`);
+                    }
+                    return match;
+                });
             };
 
             const getBadgeColor = (lavoro) => {
@@ -227,10 +240,18 @@
                 
                 if (!draggedItem) return;
 
-                const newDateStr = date.toISOString().split('T')[0];
-                const today = new Date().toISOString().split('T')[0];
+                // Fix timezone per consistency
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const newDateStr = `${year}-${month}-${day}`;
                 
-                if (newDateStr < today) {
+                const today = new Date();
+                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                
+                console.log(`🎯 Drop: newDateStr=${newDateStr}, todayStr=${todayStr}`);
+                
+                if (newDateStr < todayStr) {
                     const confirm = window.confirm(
                         `Vuoi spostare ${draggedItem.CodicePaziente} al ${date.toLocaleDateString('it-IT')}? ` +
                         `Questa è una data passata.`

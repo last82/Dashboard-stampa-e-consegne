@@ -1,544 +1,1052 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <title>Dashboard Gestione Prescrizioni 3D</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <style>
-    .timeline-step { transition: all 0.2s ease; cursor: pointer; }
-    .timeline-step:hover { transform: scale(1.1); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-    .card-hover { transition: all 0.2s ease; }
-    .card-hover:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    .delivery-badge { transition: all 0.2s ease; }
-    .delivery-badge:hover { transform: scale(1.05); }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Gestione Prescrizioni 3D</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { background: #f9fafb; }
+        .timeline-step {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .timeline-step:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .card-hover {
+            transition: all 0.2s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+        }
+        .delivery-badge {
+            transition: all 0.2s ease;
+        }
+        .delivery-badge:hover {
+            transform: scale(1.05);
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
 </head>
-<body class="bg-gray-50">
-  <div id="root"></div>
-  <script type="text/babel">
+<body>
+    <div id="root"></div>
 
-    // Configurazione Airtable
-    const AIRTABLE_BASE_ID = 'appkaYhl810WwG7jf';
-    const AIRTABLE_TOKEN = 'patnhoUAqDz44YP5G.bc379a3490a179c8d37c0c9f5ea18d1f0379e901297137c8bc10ede9624b8135';
-    const TIMELINE_TABLE = 'tblWW6GJIxgZR8hp8';
-    const PRESCRIZIONI_TABLE = 'tblM2RwtcSmfw7OTs';
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
 
-    // Helpers API
-    const fetchAirtableData = async (baseId, table, token) => {
-      const response = await fetch(`https://api.airtable.com/v0/${baseId}/${table}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
-      });
-      const data = await response.json();
-      return data.records || [];
-    };
+        // Configurazione
+        const AIRTABLE_BASE_ID = 'appkaYhl810WwG7jf';
+        const AIRTABLE_TOKEN = 'patnhoUAqDz44YP5G.bc379a3490a179c8d37c0c9f5ea18d1f0379e901297137c8bc10ede9624b8135';
+        const TIMELINE_TABLE = 'tblWW6GJIxgZR8hp8';
+        const PRESCRIZIONI_TABLE = 'tblM2RwtcSmfw7OTs';
 
-    const updateAirtableRecord = async (baseId, table, token, recordId, fields) => {
-      const response = await fetch(
-        `https://api.airtable.com/v0/${baseId}/${table}/${recordId}`,
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ fields })
-        }
-      );
-      return await response.json();
-    };
+        // API Helpers Migliorati
+        const fetchAirtableData = async (baseId, table, token) => {
+            try {
+                const response = await fetch(`https://api.airtable.com/v0/${baseId}/${table}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                return data.records || [];
+            } catch (error) {
+                console.error('Errore API:', error);
+                return [];
+            }
+        };
 
-    // Calendario drag&drop avanzato
-    function CalendarioNavigabile({ lavori, onUpdateDataConsegna }) {
-      const [currentDate, setCurrentDate] = React.useState(new Date());
-      const [draggedItem, setDraggedItem] = React.useState(null);
-      const [dropTarget, setDropTarget] = React.useState(null);
+        const updateAirtableRecord = async (baseId, table, token, recordId, fields) => {
+            try {
+                const response = await fetch(`https://api.airtable.com/v0/${baseId}/${table}/${recordId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ fields })
+                });
+                return await response.json();
+            } catch (error) {
+                console.error('Errore aggiornamento:', error);
+                throw error;
+            }
+        };
 
-      // Primo e ultimo giorno del mese corrente
-      const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-      const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-      // Inizio della griglia (domenica prima del primo giorno)
-      const startDate = new Date(firstDay);
-      startDate.setDate(startDate.getDate() - firstDay.getDay());
+        // Componente Modal Migliorato
+        function ModalDettaglio({ open, lavoro, onSave, onClose }) {
+            const [path, setPath] = useState('');
+            const [note, setNote] = useState('');
 
-      // 3 settimane = 21 giorni
-      const days = [];
-      for (let i = 0; i < 21; i++) {
-        const date = new Date(startDate);
-        date.setDate(startDate.getDate() + i);
-        days.push(date);
-      }
+            useEffect(() => {
+                if (lavoro) {
+                    setPath(lavoro.PathFileCAD || '');
+                    setNote(lavoro.NoteStampa || '');
+                }
+            }, [lavoro]);
 
-      const goToPreviousMonth = () => {
-        const newDate = new Date(currentDate);
-        newDate.setMonth(currentDate.getMonth() - 1);
-        setCurrentDate(newDate);
-      };
+            if (!open || !lavoro) return null;
 
-      const goToNextMonth = () => {
-        const newDate = new Date(currentDate);
-        newDate.setMonth(currentDate.getMonth() + 1);
-        setCurrentDate(newDate);
-      };
-
-      const goToToday = () => setCurrentDate(new Date());
-
-      const getDeliveriesForDate = (date) => {
-        const dateStr = date.toISOString().split('T')[0];
-        return lavori.filter(lavoro => lavoro.DataConsegna === dateStr);
-      };
-
-      const getBadgeColor = (lavoro) => {
-        if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
-          return 'bg-green-500 text-white';
-        } else if (lavoro.StatoCAD === 'RICEVUTO' && lavoro.StatoStampa !== 'COMPLETATA') {
-          return 'bg-yellow-500 text-white';
-        } else {
-          return 'bg-gray-400 text-white';
-        }
-      };
-
-      // Drag & drop handlers
-      const handleDragStart = (e, lavoro) => {
-        setDraggedItem(lavoro);
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/html', e.target.outerHTML);
-      };
-
-      const handleDragOver = (e, date) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        setDropTarget(date.toISOString().split('T')[0]);
-      };
-
-      const handleDragLeave = () => setDropTarget(null);
-
-      const handleDrop = async (e, date) => {
-        e.preventDefault();
-        setDropTarget(null);
-        if (!draggedItem) return;
-        const newDateStr = date.toISOString().split('T')[0];
-        const today = new Date().toISOString().split('T')[0];
-        if (newDateStr < today) {
-          const confirm = window.confirm(
-            `Vuoi spostare ${draggedItem.CodicePaziente} al ${date.toLocaleDateString('it-IT')}? Questa è una data passata.`
-          );
-          if (!confirm) {
-            setDraggedItem(null);
-            return;
-          }
-        }
-        try {
-          await onUpdateDataConsegna(draggedItem.id, newDateStr);
-        } catch (error) {
-          alert('Errore nell\'aggiornamento della data. Riprova.');
-        }
-        setDraggedItem(null);
-      };
-
-      const monthNames = [
-        'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
-        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
-      ];
-
-      const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-
-      return (
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold text-gray-900">📅 Calendario Consegne</h3>
-            <div className="flex items-center space-x-3">
-              <button onClick={goToPreviousMonth} className="p-2 hover:bg-gray-100 rounded-lg" title="Mese precedente">
-                <i className="fas fa-chevron-left text-gray-600"></i>
-              </button>
-              <span className="text-lg font-semibold min-w-[160px] text-center">
-                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-              </span>
-              <button onClick={goToNextMonth} className="p-2 hover:bg-gray-100 rounded-lg" title="Mese successivo">
-                <i className="fas fa-chevron-right text-gray-600"></i>
-              </button>
-              <button onClick={goToToday} className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">Oggi</button>
-            </div>
-          </div>
-          <div className="grid grid-cols-7 gap-2 mb-2">
-            {dayNames.map(day => (
-              <div key={day} className="text-center text-sm font-medium text-gray-600 py-2">{day}</div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-2">
-            {days.map((day, index) => {
-              const deliveries = getDeliveriesForDate(day);
-              const isToday = day.toDateString() === new Date().toDateString();
-              const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-              const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-              const dateStr = day.toISOString().split('T')[0];
-              const isDropTarget = dropTarget === dateStr;
-              return (
-                <div
-                  key={index}
-                  className={`min-h-[80px] border rounded-lg p-2 ${
-                    isToday ? 'border-blue-500 bg-blue-50' :
-                    isDropTarget ? 'border-green-500 bg-green-50' :
-                    isCurrentMonth ? (isWeekend ? 'bg-gray-50' : 'bg-white') : 'bg-gray-100'
-                  } transition-colors duration-200`}
-                  onDragOver={e => handleDragOver(e, day)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={e => handleDrop(e, day)}
-                >
-                  <div className={`text-center mb-2 ${
-                    isToday ? 'text-blue-600 font-bold' :
-                    isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
-                  }`}>
-                    <div className="text-sm">{day.getDate()}</div>
-                  </div>
-                  <div className="space-y-1">
-                    {deliveries.map(lavoro => (
-                      <div
-                        key={lavoro.id}
-                        draggable
-                        onDragStart={e => handleDragStart(e, lavoro)}
-                        className={`delivery-badge px-2 py-1 rounded text-xs font-semibold text-center cursor-move ${getBadgeColor(lavoro)} hover:opacity-80 transition-opacity`}
-                        title={`${lavoro.CodicePaziente} - ${lavoro.Laboratorio} - ${lavoro.TipoLavoro} - Trascina per spostare`}
-                      >
-                        {lavoro.CodicePaziente}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex justify-center mt-4 space-x-4 text-xs">
-            <div className="flex items-center"><div className="w-3 h-3 bg-green-500 rounded mr-1"></div><span>Stampa completata</span></div>
-            <div className="flex items-center"><div className="w-3 h-3 bg-yellow-500 rounded mr-1"></div><span>CAD ricevuto</span></div>
-            <div className="flex items-center"><div className="w-3 h-3 bg-gray-400 rounded mr-1"></div><span>In attesa</span></div>
-          </div>
-        </div>
-      );
-    }
-
-      // --- CONTINUA ---
-
-    // Modale dettagli controllata
-    function ModalDettaglio({ open, lavoro, onSave, onClose }) {
-      const [path, setPath] = React.useState(lavoro?.PathFileCAD || "");
-      const [note, setNote] = React.useState(lavoro?.NoteStampa || "");
-
-      React.useEffect(() => {
-        setPath(lavoro?.PathFileCAD || "");
-        setNote(lavoro?.NoteStampa || "");
-      }, [lavoro]);
-
-      if (!open || !lavoro) return null;
-
-      return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold mb-4">
-              Dettagli Lavoro {lavoro.CodicePaziente}
-            </h3>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Path File CAD:</label>
-              <input
-                type="text"
-                value={path}
-                onChange={e => setPath(e.target.value)}
-                className="w-full border rounded px-3 py-2"
-                placeholder="/nas/lavori/..."
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Note Stampa:</label>
-              <textarea
-                value={note}
-                onChange={e => setNote(e.target.value)}
-                className="w-full border rounded px-3 py-2 h-24"
-                placeholder="Materiale, impostazioni, note..."
-              />
-            </div>
-            <div className="flex justify-end space-x-2">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 border rounded hover:bg-gray-50"
-              >
-                Annulla
-              </button>
-              <button
-                onClick={() => onSave({ PathFileCAD: path, NoteStampa: note })}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                Salva
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    function Dashboard() {
-      const [lavori, setLavori] = React.useState([]);
-      const [lavoriArchiviati, setLavoriArchiviati] = React.useState([]);
-      const [loading, setLoading] = React.useState(true);
-      const [showArchived, setShowArchived] = React.useState(false);
-      const [selectedLavoro, setSelectedLavoro] = React.useState(null);
-      const [showModal, setShowModal] = React.useState(false);
-
-      // Caricamento dati
-      const loadData = async () => {
-        setLoading(true);
-        try {
-          const [timelineData, prescrizioniData] = await Promise.all([
-            fetchAirtableData(AIRTABLE_BASE_ID, TIMELINE_TABLE, AIRTABLE_TOKEN),
-            fetchAirtableData(AIRTABLE_BASE_ID, PRESCRIZIONI_TABLE, AIRTABLE_TOKEN)
-          ]);
-
-          const prescrizioniMap = {};
-          prescrizioniData.forEach(record => {
-            const codice = record.fields.Codice;
-            if (codice) prescrizioniMap[codice] = record.fields;
-          });
-
-          const formattedData = timelineData.map(record => {
-            const codice = record.fields.CodicePaziente;
-            const prescrizione = prescrizioniMap[codice] || {};
-            return {
-              id: record.id,
-              airtableId: record.id,
-              CodicePaziente: codice || 'N/A',
-              DataConsegna: prescrizione.DataConsegna || null,
-              Laboratorio: prescrizione.Laboratorio || 'Non specificato',
-              TipoLavoro: prescrizione.TipoLavoro || '3D',
-              DataRichiestaCAD: record.fields.DataRichiestaCAD || null,
-              DataVerificaFile: record.fields.DataVerificaFile || null,
-              DataPromemoriStampa: record.fields.DataPromemoriStampa || null,
-              DataPromemoriaFinale: record.fields.DataPromemoriaFinale || null,
-              StatoCAD: record.fields.StatoCAD || 'ATTESA',
-              StatoStampa: record.fields.StatoStampa || 'NON_INIZIATA',
-              PathFileCAD: record.fields.PathFileCAD || '',
-              NoteStampa: record.fields.NoteStampa || '',
-              Archiviato: record.fields.Archiviato || false
+            const handleSave = () => {
+                onSave({ PathFileCAD: path, NoteStampa: note });
             };
-          });
 
-          const attivi = formattedData.filter(l => !l.Archiviato);
-          const archiviati = formattedData.filter(l => l.Archiviato);
-
-          const sortByDate = (a, b) => {
-            const dateA = new Date(a.DataConsegna || '9999-12-31');
-            const dateB = new Date(b.DataConsegna || '9999-12-31');
-            return dateA - dateB;
-          };
-
-          setLavori(attivi.sort(sortByDate));
-          setLavoriArchiviati(archiviati.sort(sortByDate));
-        } catch (err) {
-          console.error('Errore caricamento:', err);
-        }
-        setLoading(false);
-      };
-
-      React.useEffect(() => {
-        loadData();
-      }, []);
-
-      // Aggiorna data consegna
-      const updateDataConsegna = async (lavoroId, newDate) => {
-        try {
-          const lavoro = lavori.find(l => l.id === lavoroId);
-          if (!lavoro) return;
-          setLavori(prev => prev.map(l =>
-            l.id === lavoroId ? { ...l, DataConsegna: newDate } : l
-          ));
-
-          const prescrizioniData = await fetchAirtableData(AIRTABLE_BASE_ID, PRESCRIZIONI_TABLE, AIRTABLE_TOKEN);
-          const prescrizioneRecord = prescrizioniData.find(record =>
-            record.fields.Codice === lavoro.CodicePaziente
-          );
-          if (prescrizioneRecord) {
-            await updateAirtableRecord(
-              AIRTABLE_BASE_ID,
-              PRESCRIZIONI_TABLE,
-              AIRTABLE_TOKEN,
-              prescrizioneRecord.id,
-              { DataConsegna: newDate }
-            );
-            await loadData();
-          } else {
-            await loadData();
-            throw new Error('Record non trovato');
-          }
-        } catch (error) {
-          await loadData();
-          alert('Errore nell\'aggiornamento della data. Riprova.');
-        }
-      };
-
-      // Toggle attivi/archiviati
-      const currentList = showArchived ? lavoriArchiviati : lavori;
-      const stats = {
-        totale: lavori.length,
-        inAttesa: lavori.filter(l => l.StatoCAD === 'ATTESA').length,
-        inCorso: lavori.filter(l => l.StatoStampa === 'IN_CORSO').length,
-        archiviati: lavoriArchiviati.length
-      };
-
-      // Modale dettagli (update ottimistico locale + patch)
-      const handleSaveModal = async (updateFields) => {
-        if (!selectedLavoro) return;
-        setShowModal(false);
-        setLavori(prev => prev.map(l =>
-          l.id === selectedLavoro.id ? { ...l, ...updateFields } : l
-        ));
-        try {
-          await updateAirtableRecord(
-            AIRTABLE_BASE_ID,
-            TIMELINE_TABLE,
-            AIRTABLE_TOKEN,
-            selectedLavoro.id,
-            updateFields
-          );
-        } catch (e) {
-          await loadData();
-          alert("Errore nel salvataggio dettagli");
-        }
-      };
-
-      // ... puoi aggiungere qui step/timeline/status/select, come nel tuo codice originale ...
-
-      // NB: Per brevità, qui non riporto tutti i dettagli dei pulsanti step, select ecc,
-      // ma puoi incollare dal tuo codice originario la parte "Card con Step/Select"
-      // dentro la lista, per ogni lavoro.
-
-      return (
-        <div className="min-h-screen bg-gray-50">
-          <div className="bg-white shadow-sm border-b">
-            <div className="max-w-7xl mx-auto px-4 py-3">
-              <h1 className="text-xl font-bold text-gray-900">🦷 Dashboard Prescrizioni 3D</h1>
-              <p className="text-xs text-gray-600">Gestione lavori odontoiatrici digitali</p>
-            </div>
-          </div>
-          <div className="max-w-7xl mx-auto px-4 py-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-              <div className="bg-white rounded-lg shadow-sm p-3">
-                <div className="flex items-center">
-                  <div className="p-1.5 bg-blue-100 rounded-lg">
-                    <i className="fas fa-cube text-blue-600 text-sm"></i>
-                  </div>
-                  <div className="ml-2">
-                    <p className="text-xs font-medium text-gray-600">Totale</p>
-                    <p className="text-xl font-bold text-gray-900">{stats.totale}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-lg shadow-sm p-3">
-                <div className="flex items-center">
-                  <div className="p-1.5 bg-yellow-100 rounded-lg">
-                    <i className="fas fa-clock text-yellow-600 text-sm"></i>
-                  </div>
-                  <div className="ml-2">
-                    <p className="text-xs font-medium text-gray-600">CAD Attesa</p>
-                    <p className="text-xl font-bold text-gray-900">{stats.inAttesa}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-lg shadow-sm p-3">
-                <div className="flex items-center">
-                  <div className="p-1.5 bg-green-100 rounded-lg">
-                    <i className="fas fa-print text-green-600 text-sm"></i>
-                  </div>
-                  <div className="ml-2">
-                    <p className="text-xs font-medium text-gray-600">Stampa</p>
-                    <p className="text-xl font-bold text-gray-900">{stats.inCorso}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-lg shadow-sm p-3">
-                <div className="flex items-center">
-                  <div className="p-1.5 bg-gray-100 rounded-lg">
-                    <i className="fas fa-archive text-gray-600 text-sm"></i>
-                  </div>
-                  <div className="ml-2">
-                    <p className="text-xs font-medium text-gray-600">Archiviati</p>
-                    <p className="text-xl font-bold text-gray-900">{stats.archiviati}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-4 items-center mb-4">
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setShowArchived(false)}
-                  className={`px-3 py-1.5 rounded text-sm font-medium ${!showArchived ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
-                >
-                  🔄 Attivi ({stats.totale})
-                </button>
-                <button
-                  onClick={() => setShowArchived(true)}
-                  className={`px-3 py-1.5 rounded text-sm font-medium ${showArchived ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
-                >
-                  📦 Archivio ({stats.archiviati})
-                </button>
-              </div>
-              <button
-                onClick={loadData}
-                disabled={loading}
-                className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white px-3 py-1.5 rounded text-sm"
-              >
-                <i className={`fas fa-sync-alt mr-1 ${loading ? 'animate-spin' : ''}`}></i>
-                {loading ? 'Caricamento...' : 'Aggiorna'}
-              </button>
-            </div>
-            <CalendarioNavigabile lavori={lavori} onUpdateDataConsegna={updateDataConsegna} />
-            <div className="space-y-3">
-              {currentList.length === 0 ? (
-                <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-                  <i className="fas fa-search text-gray-400 text-3xl mb-3"></i>
-                  <p className="text-gray-600">Nessun lavoro trovato</p>
-                </div>
-              ) : (
-                currentList.map(lavoro => (
-                  <div key={lavoro.id} className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500 card-hover">
-                    {/* Qui puoi reinserire la tua logica avanzata per STEP, SELECT, TIMELINE */}
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900">{lavoro.CodicePaziente}</h3>
-                        <div className="text-xs text-gray-600">{lavoro.Laboratorio} – {lavoro.TipoLavoro}</div>
-                        <div className="text-xs text-gray-600">Data consegna: {lavoro.DataConsegna}</div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setSelectedLavoro(lavoro);
-                          setShowModal(true);
-                        }}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
-                      >
-                        <i className="fas fa-edit mr-1"></i>Dettagli
-                      </button>
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                        <h3 className="text-lg font-bold mb-4">Dettagli Lavoro {lavoro.CodicePaziente}</h3>
+                        
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">Path File CAD:</label>
+                            <input 
+                                type="text"
+                                value={path}
+                                onChange={(e) => setPath(e.target.value)}
+                                className="w-full border rounded px-3 py-2"
+                                placeholder="/nas/lavori/..."
+                            />
+                        </div>
+                        
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">Note Stampa:</label>
+                            <textarea 
+                                value={note}
+                                onChange={(e) => setNote(e.target.value)}
+                                className="w-full border rounded px-3 py-2 h-24"
+                                placeholder="Materiale, impostazioni, note..."
+                            />
+                        </div>
+                        
+                        <div className="flex justify-end space-x-2">
+                            <button 
+                                onClick={onClose}
+                                className="px-4 py-2 border rounded hover:bg-gray-50"
+                            >
+                                Annulla
+                            </button>
+                            <button 
+                                onClick={handleSave}
+                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            >
+                                Salva
+                            </button>
+                        </div>
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-          <ModalDettaglio
-            open={showModal}
-            lavoro={selectedLavoro}
-            onSave={handleSaveModal}
-            onClose={() => setShowModal(false)}
-          />
-        </div>
-      );
-    }
+                </div>
+            );
+        }
 
-    ReactDOM.render(<Dashboard />, document.getElementById('root'));
+        // Componente Calendario Navigabile
+        function CalendarioNavigabile({ lavori, onUpdateDataConsegna }) {
+            const [currentDate, setCurrentDate] = useState(new Date());
+            const [draggedItem, setDraggedItem] = useState(null);
+            const [dropTarget, setDropTarget] = useState(null);
 
-  </script>
+            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - firstDay.getDay());
+
+            const days = [];
+            for (let i = 0; i < 21; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                days.push(date);
+            }
+
+            const goToPreviousMonth = () => {
+                const newDate = new Date(currentDate);
+                newDate.setMonth(currentDate.getMonth() - 1);
+                const threeMonthsAgo = new Date();
+                threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+                if (newDate >= threeMonthsAgo) {
+                    setCurrentDate(newDate);
+                }
+            };
+
+            const goToNextMonth = () => {
+                const newDate = new Date(currentDate);
+                newDate.setMonth(currentDate.getMonth() + 1);
+                const threeMonthsFromNow = new Date();
+                threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
+                if (newDate <= threeMonthsFromNow) {
+                    setCurrentDate(newDate);
+                }
+            };
+
+            const goToToday = () => {
+                setCurrentDate(new Date());
+            };
+
+            const getDeliveriesForDate = (date) => {
+                const dateStr = date.toISOString().split('T')[0];
+                return lavori.filter(lavoro => lavoro.DataConsegna === dateStr);
+            };
+
+            const getBadgeColor = (lavoro) => {
+                if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
+                    return 'bg-green-500 text-white';
+                } else if (lavoro.StatoCAD === 'RICEVUTO' && lavoro.StatoStampa !== 'COMPLETATA') {
+                    return 'bg-yellow-500 text-white';
+                } else {
+                    return 'bg-gray-400 text-white';
+                }
+            };
+
+            const handleDragStart = (lavoro) => {
+                setDraggedItem(lavoro);
+            };
+
+            const handleDragEnd = () => {
+                setDraggedItem(null);
+                setDropTarget(null);
+            };
+
+            const handleDragOver = (e, date) => {
+                e.preventDefault();
+                setDropTarget(date.toISOString().split('T')[0]);
+            };
+
+            const handleDragLeave = () => {
+                setDropTarget(null);
+            };
+
+            const handleDrop = async (e, date) => {
+                e.preventDefault();
+                setDropTarget(null);
+                
+                if (!draggedItem) return;
+
+                const newDateStr = date.toISOString().split('T')[0];
+                const today = new Date().toISOString().split('T')[0];
+                
+                if (newDateStr < today) {
+                    const confirm = window.confirm(
+                        `Vuoi spostare ${draggedItem.CodicePaziente} al ${date.toLocaleDateString('it-IT')}? ` +
+                        `Questa è una data passata.`
+                    );
+                    if (!confirm) {
+                        setDraggedItem(null);
+                        return;
+                    }
+                }
+
+                try {
+                    await onUpdateDataConsegna(draggedItem.id, newDateStr);
+                } catch (error) {
+                    alert('Errore nell\'aggiornamento della data. Riprova.');
+                }
+                
+                setDraggedItem(null);
+            };
+
+            const monthNames = [
+                'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+            ];
+
+            const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+
+            return (
+                <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-bold text-gray-900">📅 Calendario Consegne</h3>
+                        <div className="flex items-center space-x-3">
+                            <button 
+                                onClick={goToPreviousMonth}
+                                className="p-2 hover:bg-gray-100 rounded-lg"
+                                title="Mese precedente"
+                            >
+                                <i className="fas fa-chevron-left text-gray-600"></i>
+                            </button>
+                            
+                            <span className="text-lg font-semibold min-w-[160px] text-center">
+                                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                            </span>
+                            
+                            <button 
+                                onClick={goToNextMonth}
+                                className="p-2 hover:bg-gray-100 rounded-lg"
+                                title="Mese successivo"
+                            >
+                                <i className="fas fa-chevron-right text-gray-600"></i>
+                            </button>
+                            
+                            <button 
+                                onClick={goToToday}
+                                className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                            >
+                                Oggi
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-2 mb-2">
+                        {dayNames.map(day => (
+                            <div key={day} className="text-center text-sm font-medium text-gray-600 py-2">
+                                {day}
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-2">
+                        {days.map((day, index) => {
+                            const deliveries = getDeliveriesForDate(day);
+                            const isToday = day.toDateString() === new Date().toDateString();
+                            const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+                            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+                            const dateStr = day.toISOString().split('T')[0];
+                            const isDropTarget = dropTarget === dateStr;
+                            
+                            return (
+                                <div 
+                                    key={index}
+                                    className={`min-h-[80px] border rounded-lg p-2 ${
+                                        isToday ? 'border-blue-500 bg-blue-50' : 
+                                        isDropTarget ? 'border-green-500 bg-green-50' :
+                                        isCurrentMonth ? (isWeekend ? 'bg-gray-50' : 'bg-white') : 'bg-gray-100'
+                                    } transition-colors duration-200`}
+                                    onDragOver={(e) => handleDragOver(e, day)}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={(e) => handleDrop(e, day)}
+                                >
+                                    <div className={`text-center mb-2 ${
+                                        isToday ? 'text-blue-600 font-bold' : 
+                                        isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
+                                    }`}>
+                                        <div className="text-sm">
+                                            {day.getDate()}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="space-y-1">
+                                        {deliveries.map(lavoro => (
+                                            <div 
+                                                key={lavoro.id}
+                                                draggable
+                                                onDragStart={() => handleDragStart(lavoro)}
+                                                onDragEnd={handleDragEnd}
+                                                className={`delivery-badge px-2 py-1 rounded text-xs font-semibold text-center cursor-move ${getBadgeColor(lavoro)} hover:opacity-80 transition-opacity`}
+                                                title={`${lavoro.CodicePaziente} - ${lavoro.Laboratorio} - ${lavoro.TipoLavoro} - Trascina per spostare`}
+                                            >
+                                                {lavoro.CodicePaziente}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="flex justify-center mt-4 space-x-4 text-xs">
+                        <div className="flex items-center">
+                            <div className="w-3 h-3 bg-green-500 rounded mr-1"></div>
+                            <span>Stampa completata</span>
+                        </div>
+                        <div className="flex items-center">
+                            <div className="w-3 h-3 bg-yellow-500 rounded mr-1"></div>
+                            <span>CAD ricevuto</span>
+                        </div>
+                        <div className="flex items-center">
+                            <div className="w-3 h-3 bg-gray-400 rounded mr-1"></div>
+                            <span>In attesa</span>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Componente Card Lavoro
+        function CardLavoro({ lavoro, onToggleStep, onUpdateStatus, onOpenModal, getDaysUntilDelivery, getSteps, getStepColor }) {
+            const steps = getSteps(lavoro);
+            const daysUntil = getDaysUntilDelivery(lavoro.DataConsegna);
+
+            return (
+                <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500 card-hover">
+                    <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center space-x-3">
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900">{lavoro.CodicePaziente}</h3>
+                                <div className="flex items-center space-x-3 text-sm text-gray-600">
+                                    <span>🏭 {lavoro.Laboratorio}</span>
+                                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                        lavoro.TipoLavoro === '3D' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                                    }`}>
+                                        {lavoro.TipoLavoro === '3D' ? '🖨️ 3D' : '🔧 TRADIZIONALE'}
+                                    </span>
+                                    {lavoro.DataConsegna && (
+                                        <span className={`font-semibold px-2 py-1 rounded ${
+                                            daysUntil < 0 ? 'bg-red-100 text-red-800' :
+                                            daysUntil <= 2 ? 'bg-orange-100 text-orange-800' :
+                                            'bg-green-100 text-green-800'
+                                        }`}>
+                                            📅 {new Date(lavoro.DataConsegna).toLocaleDateString('it-IT')}
+                                            {daysUntil !== null && (
+                                                <span className="ml-1">
+                                                    ({daysUntil < 0 ? `${Math.abs(daysUntil)}gg fa` : 
+                                                      daysUntil === 0 ? 'Oggi' : 
+                                                      `${daysUntil}gg`})
+                                                </span>
+                                            )}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex space-x-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                lavoro.StatoCAD === 'RICEVUTO' ? 'bg-green-100 text-green-800' :
+                                lavoro.StatoCAD === 'ATTESA' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-red-100 text-red-800'
+                            }`}>
+                                CAD: {lavoro.StatoCAD}
+                            </span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA' ? 'bg-green-100 text-green-800' :
+                                lavoro.StatoStampa === 'IN_CORSO' ? 'bg-blue-100 text-blue-800' :
+                                'bg-gray-100 text-gray-800'
+                            }`}>
+                                Stampa: {lavoro.StatoStampa}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between items-center mb-3">
+                        {lavoro.TipoLavoro === 'TRADIZIONALE' ? (
+                            [1, 2, 3].map(stepNum => {
+                                const isCompleted = steps[`step${stepNum}`];
+                                const labels = ['', 'Inviata', 'Arrivata', 'Consegna'];
+                                const stepColor = getStepColor(lavoro, stepNum);
+                                
+                                return (
+                                    <React.Fragment key={stepNum}>
+                                        <div className="flex flex-col items-center">
+                                            <div 
+                                                className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm timeline-step ${stepColor}`}
+                                                onClick={() => stepNum > 1 && onToggleStep(lavoro.id, stepNum, lavoro.TipoLavoro)}
+                                                title={`Click per ${isCompleted ? 'annullare' : 'completare'}: ${labels[stepNum]}`}
+                                            >
+                                                {isCompleted ? <i className="fas fa-check"></i> : stepNum}
+                                            </div>
+                                            <div className="text-xs mt-1 text-center max-w-16">
+                                                <div className="font-medium text-gray-700 leading-tight">
+                                                    {labels[stepNum]}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {stepNum < 3 && <div className="flex-1 h-0.5 bg-gray-300 mx-2"></div>}
+                                    </React.Fragment>
+                                );
+                            })
+                        ) : (
+                            [1, 2, 3, 4].map(stepNum => {
+                                const isCompleted = steps[`step${stepNum}`];
+                                const labels = ['', 'Inviata', 'CAD', 'Stampa', 'Consegna'];
+                                const stepColor = getStepColor(lavoro, stepNum);
+                                
+                                return (
+                                    <React.Fragment key={stepNum}>
+                                        <div className="flex flex-col items-center">
+                                            <div 
+                                                className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm timeline-step ${stepColor}`}
+                                                onClick={() => stepNum > 1 && onToggleStep(lavoro.id, stepNum, lavoro.TipoLavoro)}
+                                                title={`Click per modificare: ${labels[stepNum]}`}
+                                            >
+                                                {isCompleted || (stepNum === 3 && lavoro.StatoStampa === 'IN_CORSO') ? <i className="fas fa-check"></i> : stepNum}
+                                            </div>
+                                            <div className="text-xs mt-1 text-center max-w-16">
+                                                <div className="font-medium text-gray-700 leading-tight">
+                                                    {labels[stepNum]}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {stepNum < 4 && <div className="flex-1 h-0.5 bg-gray-300 mx-2"></div>}
+                                    </React.Fragment>
+                                );
+                            })
+                        )}
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                        <div className="flex space-x-2">
+                            {lavoro.TipoLavoro === '3D' ? (
+                                <>
+                                    <select 
+                                        value={lavoro.StatoCAD}
+                                        onChange={(e) => onUpdateStatus(lavoro.id, 'StatoCAD', e.target.value)}
+                                        className="text-xs border rounded px-2 py-1"
+                                    >
+                                        <option value="ATTESA">CAD: Attesa</option>
+                                        <option value="RICEVUTO">CAD: Ricevuto</option>
+                                        <option value="MANCANTE">CAD: Mancante</option>
+                                    </select>
+                                    
+                                    <select 
+                                        value={lavoro.StatoStampa}
+                                        onChange={(e) => onUpdateStatus(lavoro.id, 'StatoStampa', e.target.value)}
+                                        className="text-xs border rounded px-2 py-1"
+                                    >
+                                        <option value="NON_INIZIATA">Stampa: Non iniziata</option>
+                                        <option value="IN_CORSO">Stampa: In corso</option>
+                                        <option value="COMPLETATA">Stampa: Completata</option>
+                                        <option value="CONSEGNATA">🏁 Consegnata (Archivia)</option>
+                                    </select>
+                                </>
+                            ) : (
+                                <>
+                                    <select 
+                                        value={lavoro.StatoCAD}
+                                        onChange={(e) => onUpdateStatus(lavoro.id, 'StatoCAD', e.target.value)}
+                                        className="text-xs border rounded px-2 py-1"
+                                    >
+                                        <option value="ATTESA">Lavoro: In attesa</option>
+                                        <option value="RICEVUTO">Lavoro: Arrivato</option>
+                                    </select>
+                                    
+                                    <select 
+                                        value={lavoro.StatoStampa}
+                                        onChange={(e) => onUpdateStatus(lavoro.id, 'StatoStampa', e.target.value)}
+                                        className="text-xs border rounded px-2 py-1"
+                                    >
+                                        <option value="NON_INIZIATA">Non consegnato</option>
+                                        <option value="CONSEGNATA">🏁 Consegnato (Archivia)</option>
+                                    </select>
+                                </>
+                            )}
+                        </div>
+                        
+                        {lavoro.TipoLavoro === '3D' && (
+                            <button 
+                                onClick={() => onOpenModal(lavoro)}
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
+                            >
+                                <i className="fas fa-edit mr-1"></i>
+                                Dettagli
+                            </button>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // Dashboard Principale
+        function Dashboard() {
+            const [lavori, setLavori] = useState([]);
+            const [lavoriArchiviati, setLavoriArchiviati] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [showArchived, setShowArchived] = useState(false);
+            const [selectedLavoro, setSelectedLavoro] = useState(null);
+            const [showModal, setShowModal] = useState(false);
+
+            const loadData = useCallback(async () => {
+                setLoading(true);
+                try {
+                    const [timelineData, prescrizioniData] = await Promise.all([
+                        fetchAirtableData(AIRTABLE_BASE_ID, TIMELINE_TABLE, AIRTABLE_TOKEN),
+                        fetchAirtableData(AIRTABLE_BASE_ID, PRESCRIZIONI_TABLE, AIRTABLE_TOKEN)
+                    ]);
+                    
+                    const prescrizioniMap = {};
+                    prescrizioniData.forEach(record => {
+                        const codice = record.fields.Codice;
+                        if (codice) {
+                            prescrizioniMap[codice] = record.fields;
+                        }
+                    });
+                    
+                    const formattedData = timelineData.map(record => {
+                        const codice = record.fields.CodicePaziente;
+                        const prescrizione = prescrizioniMap[codice] || {};
+                        
+                        return {
+                            id: record.id,
+                            airtableId: record.id,
+                            CodicePaziente: codice || 'N/A',
+                            DataConsegna: prescrizione.DataConsegna || null,
+                            Laboratorio: prescrizione.Laboratorio || 'Non specificato',
+                            TipoLavoro: prescrizione.TipoLavoro || '3D',
+                            DataRichiestaCAD: record.fields.DataRichiestaCAD || null,
+                            DataVerificaFile: record.fields.DataVerificaFile || null,
+                            DataPromemoriStampa: record.fields.DataPromemoriStampa || null,
+                            DataPromemoriaFinale: record.fields.DataPromemoriaFinale || null,
+                            StatoCAD: record.fields.StatoCAD || 'ATTESA',
+                            StatoStampa: record.fields.StatoStampa || 'NON_INIZIATA',
+                            PathFileCAD: record.fields.PathFileCAD || '',
+                            NoteStampa: record.fields.NoteStampa || '',
+                            Archiviato: record.fields.Archiviato || false
+                        };
+                    });
+                    
+                    const attivi = formattedData.filter(l => !l.Archiviato);
+                    const archiviati = formattedData.filter(l => l.Archiviato);
+                    
+                    const sortByDate = (a, b) => {
+                        const dateA = new Date(a.DataConsegna || '9999-12-31');
+                        const dateB = new Date(b.DataConsegna || '9999-12-31');
+                        return dateA - dateB;
+                    };
+                    
+                    setLavori(attivi.sort(sortByDate));
+                    setLavoriArchiviati(archiviati.sort(sortByDate));
+                } catch (err) {
+                    console.error('Errore caricamento:', err);
+                }
+                setLoading(false);
+            }, []);
+
+            useEffect(() => {
+                loadData();
+            }, [loadData]);
+
+            // TEST DIRETTO: Aggiornamento data consegna con verifica completa
+            const updateDataConsegna = useCallback(async (lavoroId, newDate) => {
+                console.log(`🔄 INIZIO aggiornamento data per lavoro ${lavoroId} → ${newDate}`);
+                
+                try {
+                    const lavoro = lavori.find(l => l.id === lavoroId);
+                    if (!lavoro) {
+                        console.error('❌ Lavoro non trovato:', lavoroId);
+                        return;
+                    }
+
+                    console.log(`📋 Lavoro trovato: ${lavoro.CodicePaziente}, DataConsegna attuale: ${lavoro.DataConsegna}`);
+
+                    // 1. Update ottimistico locale
+                    setLavori(prev => {
+                        const updated = prev.map(l => 
+                            l.id === lavoroId ? { ...l, DataConsegna: newDate } : l
+                        );
+                        console.log(`🔄 State locale aggiornato per ${lavoro.CodicePaziente}`);
+                        return updated;
+                    });
+
+                    // 2. TEST DIRETTO: Fetch e aggiorna Airtable step by step
+                    console.log(`🔍 Fetching tabella Prescrizioni...`);
+                    const response = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${PRESCRIZIONI_TABLE}`, {
+                        headers: {
+                            'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        console.error('❌ Errore fetch Airtable:', response.status, response.statusText);
+                        return;
+                    }
+
+                    const data = await response.json();
+                    console.log(`📊 Records Prescrizioni trovati:`, data.records?.length || 0);
+                    
+                    // 3. Cerca il record specifico
+                    const prescrizioneRecord = data.records?.find(record => 
+                        record.fields.Codice === lavoro.CodicePaziente
+                    );
+
+                    if (!prescrizioneRecord) {
+                        console.error(`❌ Record NON trovato per codice: ${lavoro.CodicePaziente}`);
+                        console.log(`📋 Codici disponibili:`, data.records?.map(r => r.fields.Codice) || []);
+                        return;
+                    }
+
+                    console.log(`✅ Record trovato:`, {
+                        id: prescrizioneRecord.id,
+                        codice: prescrizioneRecord.fields.Codice,
+                        dataAttuale: prescrizioneRecord.fields.DataConsegna
+                    });
+
+                    // 4. UPDATE DIRETTO con verifica
+                    console.log(`🔄 Aggiornando record ${prescrizioneRecord.id} con data ${newDate}...`);
+                    
+                    const updateResponse = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${PRESCRIZIONI_TABLE}/${prescrizioneRecord.id}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ 
+                            fields: { 
+                                DataConsegna: newDate 
+                            } 
+                        })
+                    });
+
+                    if (!updateResponse.ok) {
+                        const errorText = await updateResponse.text();
+                        console.error('❌ Errore UPDATE Airtable:', updateResponse.status, errorText);
+                        return;
+                    }
+
+                    const updateResult = await updateResponse.json();
+                    console.log(`✅ SUCCESSO! Airtable aggiornato:`, {
+                        id: updateResult.id,
+                        nuovaData: updateResult.fields.DataConsegna
+                    });
+
+                    // 5. VERIFICA: Rileggi il record per confermare
+                    console.log(`🔍 Verifica: rileggo il record...`);
+                    const verifyResponse = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${PRESCRIZIONI_TABLE}/${prescrizioneRecord.id}`, {
+                        headers: {
+                            'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (verifyResponse.ok) {
+                        const verifyData = await verifyResponse.json();
+                        console.log(`✅ VERIFICA OK - Data in Airtable:`, verifyData.fields.DataConsegna);
+                        
+                        if (verifyData.fields.DataConsegna === newDate) {
+                            console.log(`🎉 SUCCESSO COMPLETO! Data aggiornata correttamente in Airtable`);
+                        } else {
+                            console.error(`❌ PROBLEMA! Data in Airtable (${verifyData.fields.DataConsegna}) ≠ Data richiesta (${newDate})`);
+                        }
+                    }
+
+                } catch (error) {
+                    console.error('❌ ERRORE COMPLETO:', error);
+                    // Rollback solo in caso di errore reale
+                    await loadData();
+                    throw error;
+                }
+            }, [lavori, loadData]);
+
+            // Toggle degli stati
+            const toggleStep = useCallback(async (id, stepNumber, tipoLavoro) => {
+                try {
+                    const lavoro = lavori.find(l => l.id === id);
+                    if (!lavoro) return;
+
+                    let updateFields = {};
+                    
+                    if (tipoLavoro === '3D') {
+                        switch(stepNumber) {
+                            case 2:
+                                updateFields.StatoCAD = lavoro.StatoCAD === 'RICEVUTO' ? 'ATTESA' : 'RICEVUTO';
+                                break;
+                            case 3:
+                                if (lavoro.StatoStampa === 'NON_INIZIATA') {
+                                    updateFields.StatoStampa = 'IN_CORSO';
+                                } else if (lavoro.StatoStampa === 'IN_CORSO') {
+                                    updateFields.StatoStampa = 'COMPLETATA';
+                                } else if (lavoro.StatoStampa === 'COMPLETATA') {
+                                    updateFields.StatoStampa = 'NON_INIZIATA';
+                                } else {
+                                    updateFields.StatoStampa = 'IN_CORSO';
+                                }
+                                break;
+                            case 4:
+                                if (lavoro.StatoStampa === 'CONSEGNATA') {
+                                    updateFields.StatoStampa = 'COMPLETATA';
+                                    updateFields.Archiviato = false;
+                                } else {
+                                    updateFields.StatoStampa = 'CONSEGNATA';
+                                    updateFields.Archiviato = true;
+                                }
+                                break;
+                        }
+                    } else {
+                        switch(stepNumber) {
+                            case 2:
+                                updateFields.StatoCAD = lavoro.StatoCAD === 'RICEVUTO' ? 'ATTESA' : 'RICEVUTO';
+                                break;
+                            case 3:
+                                if (lavoro.StatoStampa === 'CONSEGNATA') {
+                                    updateFields.StatoStampa = 'NON_INIZIATA';
+                                    updateFields.Archiviato = false;
+                                } else {
+                                    updateFields.StatoStampa = 'CONSEGNATA';
+                                    updateFields.Archiviato = true;
+                                }
+                                break;
+                        }
+                    }
+
+                    await updateAirtableRecord(AIRTABLE_BASE_ID, TIMELINE_TABLE, AIRTABLE_TOKEN, lavoro.airtableId, updateFields);
+
+                    setLavori(prev => {
+                        const updated = prev.map(l => 
+                            l.id === id ? { ...l, ...updateFields } : l
+                        );
+                        
+                        if (updateFields.Archiviato) {
+                            const archiviato = updated.find(l => l.id === id);
+                            setLavoriArchiviati(prevArch => [...prevArch, archiviato]);
+                            return updated.filter(l => l.id !== id);
+                        } else if (updateFields.Archiviato === false) {
+                            const ripristinato = updated.find(l => l.id === id);
+                            setLavoriArchiviati(prevArch => prevArch.filter(l => l.id !== id));
+                            return updated;
+                        }
+                        
+                        return updated;
+                    });
+                } catch (error) {
+                    alert('Errore aggiornamento');
+                }
+            }, [lavori]);
+
+            const updateStatus = useCallback(async (id, field, value) => {
+                try {
+                    const lavoro = lavori.find(l => l.id === id);
+                    if (!lavoro) return;
+
+                    let updateFields = { [field]: value };
+                    
+                    if (field === 'StatoStampa' && value === 'CONSEGNATA') {
+                        updateFields.Archiviato = true;
+                    }
+
+                    await updateAirtableRecord(AIRTABLE_BASE_ID, TIMELINE_TABLE, AIRTABLE_TOKEN, lavoro.airtableId, updateFields);
+
+                    setLavori(prev => {
+                        const updated = prev.map(l => 
+                            l.id === id ? { ...l, ...updateFields } : l
+                        );
+                        
+                        if (updateFields.Archiviato) {
+                            const archiviato = updated.find(l => l.id === id);
+                            setLavoriArchiviati(prevArch => [...prevArch, archiviato]);
+                            return updated.filter(l => l.id !== id);
+                        }
+                        
+                        return updated;
+                    });
+                } catch (error) {
+                    alert('Errore aggiornamento');
+                }
+            }, [lavori]);
+
+            // Salvataggio modal
+            const handleSaveModal = useCallback(async (updateFields) => {
+                if (!selectedLavoro) return;
+                
+                setShowModal(false);
+                
+                // Update ottimistico
+                setLavori(prev => prev.map(l => 
+                    l.id === selectedLavoro.id ? { ...l, ...updateFields } : l
+                ));
+                
+                try {
+                    await updateAirtableRecord(AIRTABLE_BASE_ID, TIMELINE_TABLE, AIRTABLE_TOKEN, selectedLavoro.id, updateFields);
+                } catch (error) {
+                    await loadData();
+                    alert('Errore nel salvataggio dettagli');
+                }
+            }, [selectedLavoro, loadData]);
+
+            // Helper functions
+            const getSteps = useCallback((lavoro) => {
+                if (lavoro.TipoLavoro === 'TRADIZIONALE') {
+                    return {
+                        step1: true,
+                        step2: lavoro.StatoCAD === 'RICEVUTO',
+                        step3: lavoro.StatoStampa === 'CONSEGNATA'
+                    };
+                } else {
+                    return {
+                        step1: true,
+                        step2: lavoro.StatoCAD === 'RICEVUTO',
+                        step3: lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA',
+                        step4: lavoro.StatoStampa === 'CONSEGNATA'
+                    };
+                }
+            }, []);
+
+            const isStepOverdue = useCallback((lavoro, step) => {
+                const oggi = new Date();
+                switch(step) {
+                    case 2:
+                        return lavoro.StatoCAD !== 'RICEVUTO' && lavoro.DataRichiestaCAD && oggi > new Date(lavoro.DataRichiestaCAD);
+                    case 3:
+                        return lavoro.StatoStampa !== 'COMPLETATA' && lavoro.StatoStampa !== 'CONSEGNATA' && lavoro.DataPromemoriStampa && oggi > new Date(lavoro.DataPromemoriStampa);
+                    case 4:
+                        return lavoro.StatoStampa !== 'CONSEGNATA' && lavoro.DataPromemoriaFinale && oggi > new Date(lavoro.DataPromemoriaFinale);
+                    default:
+                        return false;
+                }
+            }, []);
+
+            const getStepColor = useCallback((lavoro, stepNumber) => {
+                const steps = getSteps(lavoro);
+                const isCompleted = steps[`step${stepNumber}`];
+                
+                if (lavoro.TipoLavoro === '3D' && stepNumber === 3) {
+                    // Fix per pallino stampa - tutti i casi coperti
+                    if (lavoro.StatoStampa === 'IN_CORSO') {
+                        return 'bg-orange-500'; // Arancione per "in corso"
+                    } else if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
+                        return 'bg-green-500'; // Verde per "completata"
+                    } else if (lavoro.StatoStampa === 'NON_INIZIATA') {
+                        return 'bg-gray-500'; // Grigio per "non iniziata" - FIX: era mancante!
+                    } else {
+                        return 'bg-gray-500'; // Default grigio
+                    }
+                }
+                
+                if (isStepOverdue(lavoro, stepNumber)) {
+                    return 'bg-red-500 animate-pulse';
+                } else if (isCompleted) {
+                    return 'bg-green-500';
+                } else {
+                    return 'bg-gray-500';
+                }
+            }, [getSteps, isStepOverdue]);
+
+            const getDaysUntilDelivery = useCallback((dataConsegna) => {
+                if (!dataConsegna) return null;
+                const today = new Date();
+                const delivery = new Date(dataConsegna);
+                const diffTime = delivery - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                return diffDays;
+            }, []);
+
+            const currentList = showArchived ? lavoriArchiviati : lavori;
+            const stats = {
+                totale: lavori.length,
+                inAttesa: lavori.filter(l => l.StatoCAD === 'ATTESA').length,
+                inCorso: lavori.filter(l => l.StatoStampa === 'IN_CORSO').length,
+                archiviati: lavoriArchiviati.length
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-50">
+                    <div className="bg-white shadow-sm border-b">
+                        <div className="max-w-7xl mx-auto px-4 py-3">
+                            <h1 className="text-xl font-bold text-gray-900">🦷 Dashboard Prescrizioni 3D</h1>
+                            <p className="text-xs text-gray-600">Gestione lavori odontoiatrici digitali</p>
+                        </div>
+                    </div>
+
+                    <div className="max-w-7xl mx-auto px-4 py-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                            <div className="bg-white rounded-lg shadow-sm p-3">
+                                <div className="flex items-center">
+                                    <div className="p-1.5 bg-blue-100 rounded-lg">
+                                        <i className="fas fa-cube text-blue-600 text-sm"></i>
+                                    </div>
+                                    <div className="ml-2">
+                                        <p className="text-xs font-medium text-gray-600">Totale</p>
+                                        <p className="text-xl font-bold text-gray-900">{stats.totale}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-white rounded-lg shadow-sm p-3">
+                                <div className="flex items-center">
+                                    <div className="p-1.5 bg-yellow-100 rounded-lg">
+                                        <i className="fas fa-clock text-yellow-600 text-sm"></i>
+                                    </div>
+                                    <div className="ml-2">
+                                        <p className="text-xs font-medium text-gray-600">CAD Attesa</p>
+                                        <p className="text-xl font-bold text-gray-900">{stats.inAttesa}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-white rounded-lg shadow-sm p-3">
+                                <div className="flex items-center">
+                                    <div className="p-1.5 bg-green-100 rounded-lg">
+                                        <i className="fas fa-print text-green-600 text-sm"></i>
+                                    </div>
+                                    <div className="ml-2">
+                                        <p className="text-xs font-medium text-gray-600">Stampa</p>
+                                        <p className="text-xl font-bold text-gray-900">{stats.inCorso}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-white rounded-lg shadow-sm p-3">
+                                <div className="flex items-center">
+                                    <div className="p-1.5 bg-gray-100 rounded-lg">
+                                        <i className="fas fa-archive text-gray-600 text-sm"></i>
+                                    </div>
+                                    <div className="ml-2">
+                                        <p className="text-xs font-medium text-gray-600">Archiviati</p>
+                                        <p className="text-xl font-bold text-gray-900">{stats.archiviati}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {!showArchived && <CalendarioNavigabile lavori={lavori} onUpdateDataConsegna={updateDataConsegna} />}
+
+                        <div className="bg-white rounded-lg shadow-sm p-3 mb-4">
+                            <div className="flex gap-4 items-center">
+                                <div className="flex space-x-2">
+                                    <button 
+                                        onClick={() => setShowArchived(false)}
+                                        className={`px-3 py-1.5 rounded text-sm font-medium ${!showArchived ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                                    >
+                                        🔄 Attivi ({stats.totale})
+                                    </button>
+                                    <button 
+                                        onClick={() => setShowArchived(true)}
+                                        className={`px-3 py-1.5 rounded text-sm font-medium ${showArchived ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                                    >
+                                        📦 Archivio ({stats.archiviati})
+                                    </button>
+                                </div>
+                                
+                                <button 
+                                    onClick={loadData}
+                                    disabled={loading}
+                                    className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white px-3 py-1.5 rounded text-sm"
+                                >
+                                    <i className={`fas fa-sync-alt mr-1 ${loading ? 'animate-spin' : ''}`}></i>
+                                    {loading ? 'Caricamento...' : 'Ricarica da Airtable'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            {currentList.length === 0 ? (
+                                <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+                                    <i className="fas fa-search text-gray-400 text-3xl mb-3"></i>
+                                    <p className="text-gray-600">Nessun lavoro trovato</p>
+                                </div>
+                            ) : (
+                                currentList.map(lavoro => (
+                                    <CardLavoro
+                                        key={lavoro.id}
+                                        lavoro={lavoro}
+                                        onToggleStep={toggleStep}
+                                        onUpdateStatus={updateStatus}
+                                        onOpenModal={(lavoro) => {
+                                            setSelectedLavoro(lavoro);
+                                            setShowModal(true);
+                                        }}
+                                        getDaysUntilDelivery={getDaysUntilDelivery}
+                                        getSteps={getSteps}
+                                        getStepColor={getStepColor}
+                                    />
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    <ModalDettaglio
+                        open={showModal}
+                        lavoro={selectedLavoro}
+                        onSave={handleSaveModal}
+                        onClose={() => setShowModal(false)}
+                    />
+                </div>
+            );
+        }
+
+        ReactDOM.render(<Dashboard />, document.getElementById('root'));
+    </script>
 </body>
 </html>

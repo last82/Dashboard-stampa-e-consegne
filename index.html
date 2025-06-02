@@ -89,7 +89,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useCallback, useRef } = React;
+        const { useState, useEffect, useCallback, useRef, useMemo } = React;
 
         // Configurazione
         const AIRTABLE_BASE_ID = 'appkaYhl810WwG7jf';
@@ -194,277 +194,130 @@
             );
         }
 
-        // Componente Calendario
-        function CalendarioNavigabile({ lavori, onUpdateDataConsegna }) {
-            const [currentDate, setCurrentDate] = useState(new Date());
-            const [draggedItem, setDraggedItem] = useState(null);
-            const [dropTarget, setDropTarget] = useState(null);
-            const [isDragging, setIsDragging] = useState(false); // NUOVO: traccia stato drag
+        // Componente FullCalendar
+        function CalendarioFullCalendar({ lavori, onUpdateDataConsegna }) {
+            const calendarRef = useRef(null);
+            const [calendar, setCalendar] = useState(null);
 
-            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-            const startDate = new Date(firstDay);
-            startDate.setDate(startDate.getDate() - firstDay.getDay());
-
-            // ESPANSIONE DINAMICA: 3 settimane normali, 6 settimane durante drag
-            const weeksToShow = isDragging ? 6 : 3;
-            const daysToShow = weeksToShow * 7;
-
-            const days = [];
-            for (let i = 0; i < daysToShow; i++) {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + i);
-                days.push(date);
+            // Determina colore evento basato su stato
+            function getEventColor(lavoro) {
+                if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
+                    return '#22c55e'; // Verde
+                } else if (lavoro.StatoCAD === 'RICEVUTO' && lavoro.StatoStampa !== 'COMPLETATA') {
+                    return '#eab308'; // Giallo
+                } else if (lavoro.StatoStampa === 'IN_CORSO') {
+                    return '#f97316'; // Arancione
+                } else {
+                    return '#6b7280'; // Grigio
+                }
             }
 
-            const goToPreviousMonth = () => {
-                const newDate = new Date(currentDate);
-                newDate.setMonth(currentDate.getMonth() - 1);
-                const threeMonthsAgo = new Date();
-                threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-                if (newDate >= threeMonthsAgo) {
-                    setCurrentDate(newDate);
-                }
-            };
+            // Converti lavori in eventi FullCalendar
+            const events = useMemo(() => {
+                return lavori.map(lavoro => ({
+                    id: lavoro.id,
+                    title: lavoro.CodicePaziente,
+                    date: lavoro.DataConsegna,
+                    backgroundColor: getEventColor(lavoro),
+                    borderColor: getEventColor(lavoro),
+                    textColor: '#ffffff',
+                    extendedProps: {
+                        laboratorio: lavoro.Laboratorio,
+                        tipoLavoro: lavoro.TipoLavoro,
+                        statoCAD: lavoro.StatoCAD,
+                        statoStampa: lavoro.StatoStampa
+                    }
+                }));
+            }, [lavori]);
 
-            const goToNextMonth = () => {
-                const newDate = new Date(currentDate);
-                newDate.setMonth(currentDate.getMonth() + 1);
-                const threeMonthsFromNow = new Date();
-                threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
-                if (newDate <= threeMonthsFromNow) {
-                    setCurrentDate(newDate);
-                }
-            };
-
-            // AGGIUNTO: Event listener globale per catturare dragend su tutto il documento
+            // Inizializza FullCalendar
             useEffect(() => {
-                const handleGlobalDragEnd = () => {
-                    if (isDragging) {
-                        console.log('🏁 Drag terminato globalmente - Reset calendario');
-                        setDraggedItem(null);
-                        setDropTarget(null);
-                        setIsDragging(false);
-                    }
-                };
+                if (calendarRef.current && !calendar && window.FullCalendar) {
+                    const newCalendar = new window.FullCalendar.Calendar(calendarRef.current, {
+                        initialView: 'dayGridMonth',
+                        locale: 'it',
+                        headerToolbar: {
+                            left: 'prev,next today',
+                            center: 'title',
+                            right: 'dayGridMonth,dayGridWeek'
+                        },
+                        height: 'auto',
+                        dayMaxEvents: 3,
+                        moreLinkClick: 'popover',
+                        editable: true,
+                        droppable: true,
+                        events: events,
+                        
+                        // Callback drag & drop
+                        eventDrop: async function(info) {
+                            const newDate = info.event.startStr;
+                            console.log(`📅 Evento spostato: ${info.event.title} → ${newDate}`);
+                            
+                            try {
+                                await onUpdateDataConsegna(info.event.id, newDate);
+                            } catch (error) {
+                                console.error('Errore aggiornamento:', error);
+                                info.revert();
+                                alert('Errore nell\'aggiornamento della data. Riprova.');
+                            }
+                        },
+                        
+                        // Tooltip su hover
+                        eventMouseEnter: function(info) {
+                            const props = info.event.extendedProps;
+                            info.el.title = `${info.event.title}\n🏭 ${props.laboratorio}\n🖨️ ${props.tipoLavoro}\n📄 CAD: ${props.statoCAD}\n🖨️ Stampa: ${props.statoStampa}`;
+                        },
+                        
+                        // Conferma per date passate
+                        eventChange: function(info) {
+                            const today = new Date();
+                            const eventDate = new Date(info.event.startStr);
+                            
+                            if (eventDate < today) {
+                                const confirm = window.confirm(
+                                    `Vuoi spostare ${info.event.title} al ${eventDate.toLocaleDateString('it-IT')}? ` +
+                                    `Questa è una data passata.`
+                                );
+                                if (!confirm) {
+                                    info.revert();
+                                }
+                            }
+                        }
+                    });
 
-                // Ascolta dragend su tutto il documento
-                document.addEventListener('dragend', handleGlobalDragEnd);
-                
-                // Cleanup
+                    newCalendar.render();
+                    setCalendar(newCalendar);
+                }
+
                 return () => {
-                    document.removeEventListener('dragend', handleGlobalDragEnd);
-                };
-            }, [isDragging]);
-
-            const goToToday = () => {
-                setCurrentDate(new Date());
-            };
-
-            const getDeliveriesForDate = (date) => {
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                const dateStr = `${year}-${month}-${day}`;
-                
-                return lavori.filter(lavoro => lavoro.DataConsegna === dateStr);
-            };
-
-            const getBadgeColor = (lavoro) => {
-                if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
-                    return 'bg-green-500 text-white';
-                } else if (lavoro.StatoCAD === 'RICEVUTO' && lavoro.StatoStampa !== 'COMPLETATA') {
-                    return 'bg-yellow-500 text-white';
-                } else {
-                    return 'bg-gray-400 text-white';
-                }
-            };
-
-            const handleDragStart = (lavoro) => {
-                setDraggedItem(lavoro);
-                setIsDragging(true); // ATTIVA espansione calendario
-                console.log('🎯 Drag iniziato - Calendario espanso a 6 settimane');
-            };
-
-            const handleDragEnd = () => {
-                setDraggedItem(null);
-                setDropTarget(null);
-                setIsDragging(false); // DISATTIVA espansione calendario
-                console.log('🏁 Drag terminato - Calendario ridotto a 3 settimane');
-            };
-
-            const handleDragOver = (e, date) => {
-                e.preventDefault();
-                setDropTarget(date.toISOString().split('T')[0]);
-            };
-
-            const handleDragLeave = () => {
-                setDropTarget(null);
-            };
-
-            const handleDrop = async (e, date) => {
-                e.preventDefault();
-                setDropTarget(null);
-                
-                if (!draggedItem) return;
-
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                const newDateStr = `${year}-${month}-${day}`;
-                
-                const today = new Date();
-                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                
-                if (newDateStr < todayStr) {
-                    const confirm = window.confirm(
-                        `Vuoi spostare ${draggedItem.CodicePaziente} al ${date.toLocaleDateString('it-IT')}? ` +
-                        `Questa è una data passata.`
-                    );
-                    if (!confirm) {
-                        // IMPORTANTE: Reset drag state anche se annullato
-                        setDraggedItem(null);
-                        setIsDragging(false);
-                        return;
+                    if (calendar) {
+                        calendar.destroy();
+                        setCalendar(null);
                     }
+                };
+            }, [events, onUpdateDataConsegna]);
+
+            // Aggiorna eventi quando cambiano i lavori
+            useEffect(() => {
+                if (calendar && events) {
+                    calendar.removeAllEvents();
+                    calendar.addEventSource(events);
                 }
-
-                try {
-                    await onUpdateDataConsegna(draggedItem.id, newDateStr);
-                } catch (error) {
-                    alert('Errore nell\'aggiornamento della data. Riprova.');
-                }
-                
-                // IMPORTANTE: Reset completo drag state
-                setDraggedItem(null);
-                setIsDragging(false);
-            };
-
-            const monthNames = [
-                'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
-                'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
-            ];
-
-            const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+            }, [lavori, calendar, events]);
 
             return (
                 <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-bold text-gray-900">
-                            📅 Calendario Consegne 
-                            {isDragging && <span className="text-sm text-orange-600 ml-2">(📏 Modalità espansa)</span>}
-                        </h3>
-                        <div className="flex items-center space-x-3">
-                            <button 
-                                onClick={goToPreviousMonth}
-                                className="p-2 hover:bg-gray-100 rounded-lg"
-                                title="Mese precedente"
-                            >
-                                <i className="fas fa-chevron-left text-gray-600"></i>
-                            </button>
-                            
-                            <span className="text-lg font-semibold min-w-[160px] text-center">
-                                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-                            </span>
-                            
-                            <button 
-                                onClick={goToNextMonth}
-                                className="p-2 hover:bg-gray-100 rounded-lg"
-                                title="Mese successivo"
-                            >
-                                <i className="fas fa-chevron-right text-gray-600"></i>
-                            </button>
-                            
-                            <button 
-                                onClick={goToToday}
-                                className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
-                            >
-                                Oggi
-                            </button>
+                        <h3 className="text-lg font-bold text-gray-900">📅 Calendario Consegne</h3>
+                        <div className="text-sm text-gray-600">
+                            <span className="mr-4">🟢 Completata</span>
+                            <span className="mr-4">🟡 CAD ricevuto</span>
+                            <span className="mr-4">🟠 In stampa</span>
+                            <span>⚫ In attesa</span>
                         </div>
                     </div>
-
-                    <div className="grid grid-cols-7 gap-2 mb-2">
-                        {dayNames.map(day => (
-                            <div key={day} className="text-center text-sm font-medium text-gray-600 py-2">
-                                {day}
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="grid grid-cols-7 gap-2">
-                        {days.map((day, index) => {
-                            const deliveries = getDeliveriesForDate(day);
-                            const isToday = day.toDateString() === new Date().toDateString();
-                            const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-                            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-                            const dateStr = day.toISOString().split('T')[0];
-                            const isDropTarget = dropTarget === dateStr;
-                            
-                            // EVIDENZIA le settimane extra durante il drag
-                            const weekNumber = Math.floor(index / 7);
-                            const isExtraWeek = weekNumber >= 3;
-                            
-                            return (
-                                <div 
-                                    key={index}
-                                    className={`min-h-[80px] border rounded-lg p-2 transition-all duration-300 ${
-                                        isToday ? 'border-blue-500 bg-blue-50' : 
-                                        isDropTarget ? 'border-green-500 bg-green-50' :
-                                        isDragging && isExtraWeek ? 'border-orange-300 bg-orange-50' : // EVIDENZIA settimane extra
-                                        isCurrentMonth ? (isWeekend ? 'bg-gray-50' : 'bg-white') : 'bg-gray-100'
-                                    }`}
-                                    onDragOver={(e) => handleDragOver(e, day)}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={(e) => handleDrop(e, day)}
-                                >
-                                    <div className={`text-center mb-2 ${
-                                        isToday ? 'text-blue-600 font-bold' : 
-                                        isDragging && isExtraWeek ? 'text-orange-600 font-semibold' : // EVIDENZIA date extra
-                                        isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
-                                    }`}>
-                                        <div className="text-sm">
-                                            {day.getDate()}
-                                        </div>
-                                        {isDragging && isExtraWeek && (
-                                            <div className="text-xs text-orange-500">
-                                                {day.toLocaleDateString('it-IT', { month: 'short' })}
-                                            </div>
-                                        )}
-                                    </div>
-                                    
-                                    <div className="space-y-1">
-                                        {deliveries.map(lavoro => (
-                                            <div 
-                                                key={lavoro.id}
-                                                draggable
-                                                onDragStart={() => handleDragStart(lavoro)}
-                                                onDragEnd={handleDragEnd}
-                                                className={`delivery-badge px-2 py-1 rounded text-xs font-semibold text-center cursor-move ${getBadgeColor(lavoro)} hover:opacity-80 transition-opacity`}
-                                                title={`${lavoro.CodicePaziente} - ${lavoro.Laboratorio} - ${lavoro.TipoLavoro} - Trascina per spostare`}
-                                            >
-                                                {lavoro.CodicePaziente}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    <div className="flex justify-center mt-4 space-x-4 text-xs">
-                        <div className="flex items-center">
-                            <div className="w-3 h-3 bg-green-500 rounded mr-1"></div>
-                            <span>Stampa completata</span>
-                        </div>
-                        <div className="flex items-center">
-                            <div className="w-3 h-3 bg-yellow-500 rounded mr-1"></div>
-                            <span>CAD ricevuto</span>
-                        </div>
-                        <div className="flex items-center">
-                            <div className="w-3 h-3 bg-gray-400 rounded mr-1"></div>
-                            <span>In attesa</span>
-                        </div>
-                    </div>
+                    
+                    <div ref={calendarRef}></div>
                 </div>
             );
         }
@@ -775,348 +628,4 @@
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({ 
-                            fields: { 
-                                DataConsegna: newDate 
-                            } 
-                        })
-                    });
-
-                    if (!updateResponse.ok) {
-                        const errorText = await updateResponse.text();
-                        console.error('❌ Errore UPDATE Airtable:', updateResponse.status, errorText);
-                        return;
-                    }
-
-                    console.log(`✅ SUCCESSO! Airtable aggiornato`);
-
-                } catch (error) {
-                    console.error('❌ ERRORE COMPLETO:', error);
-                    await loadData();
-                    throw error;
-                }
-            }, [lavori, loadData]);
-
-            const toggleStep = useCallback(async (id, stepNumber, tipoLavoro) => {
-                try {
-                    const lavoro = lavori.find(l => l.id === id);
-                    if (!lavoro) return;
-
-                    let updateFields = {};
-                    
-                    if (tipoLavoro === '3D') {
-                        switch(stepNumber) {
-                            case 2:
-                                updateFields.StatoCAD = lavoro.StatoCAD === 'RICEVUTO' ? 'ATTESA' : 'RICEVUTO';
-                                break;
-                            case 3:
-                                if (lavoro.StatoStampa === 'NON_INIZIATA') {
-                                    updateFields.StatoStampa = 'IN_CORSO';
-                                } else if (lavoro.StatoStampa === 'IN_CORSO') {
-                                    updateFields.StatoStampa = 'COMPLETATA';
-                                } else if (lavoro.StatoStampa === 'COMPLETATA') {
-                                    updateFields.StatoStampa = 'NON_INIZIATA';
-                                } else {
-                                    updateFields.StatoStampa = 'IN_CORSO';
-                                }
-                                break;
-                            case 4:
-                                if (lavoro.StatoStampa === 'CONSEGNATA') {
-                                    updateFields.StatoStampa = 'COMPLETATA';
-                                    updateFields.Archiviato = false;
-                                } else {
-                                    updateFields.StatoStampa = 'CONSEGNATA';
-                                    updateFields.Archiviato = true;
-                                }
-                                break;
-                        }
-                    } else {
-                        switch(stepNumber) {
-                            case 2:
-                                updateFields.StatoCAD = lavoro.StatoCAD === 'RICEVUTO' ? 'ATTESA' : 'RICEVUTO';
-                                break;
-                            case 3:
-                                if (lavoro.StatoStampa === 'CONSEGNATA') {
-                                    updateFields.StatoStampa = 'NON_INIZIATA';
-                                    updateFields.Archiviato = false;
-                                } else {
-                                    updateFields.StatoStampa = 'CONSEGNATA';
-                                    updateFields.Archiviato = true;
-                                }
-                                break;
-                        }
-                    }
-
-                    await updateAirtableRecord(AIRTABLE_BASE_ID, TIMELINE_TABLE, AIRTABLE_TOKEN, lavoro.airtableId, updateFields);
-
-                    setLavori(prev => {
-                        const updated = prev.map(l => 
-                            l.id === id ? { ...l, ...updateFields } : l
-                        );
-                        
-                        if (updateFields.Archiviato) {
-                            const archiviato = updated.find(l => l.id === id);
-                            setLavoriArchiviati(prevArch => [...prevArch, archiviato]);
-                            return updated.filter(l => l.id !== id);
-                        } else if (updateFields.Archiviato === false) {
-                            const ripristinato = updated.find(l => l.id === id);
-                            setLavoriArchiviati(prevArch => prevArch.filter(l => l.id !== id));
-                            return updated;
-                        }
-                        
-                        return updated;
-                    });
-                } catch (error) {
-                    alert('Errore aggiornamento');
-                }
-            }, [lavori]);
-
-            const updateStatus = useCallback(async (id, field, value) => {
-                try {
-                    const lavoro = lavori.find(l => l.id === id);
-                    if (!lavoro) return;
-
-                    let updateFields = { [field]: value };
-                    
-                    if (field === 'StatoStampa' && value === 'CONSEGNATA') {
-                        updateFields.Archiviato = true;
-                    }
-
-                    await updateAirtableRecord(AIRTABLE_BASE_ID, TIMELINE_TABLE, AIRTABLE_TOKEN, lavoro.airtableId, updateFields);
-
-                    setLavori(prev => {
-                        const updated = prev.map(l => 
-                            l.id === id ? { ...l, ...updateFields } : l
-                        );
-                        
-                        if (updateFields.Archiviato) {
-                            const archiviato = updated.find(l => l.id === id);
-                            setLavoriArchiviati(prevArch => [...prevArch, archiviato]);
-                            return updated.filter(l => l.id !== id);
-                        }
-                        
-                        return updated;
-                    });
-                } catch (error) {
-                    alert('Errore aggiornamento');
-                }
-            }, [lavori]);
-
-            const handleSaveModal = useCallback(async (updateFields) => {
-                if (!selectedLavoro) return;
-                
-                setShowModal(false);
-                
-                setLavori(prev => prev.map(l => 
-                    l.id === selectedLavoro.id ? { ...l, ...updateFields } : l
-                ));
-                
-                try {
-                    await updateAirtableRecord(AIRTABLE_BASE_ID, TIMELINE_TABLE, AIRTABLE_TOKEN, selectedLavoro.id, updateFields);
-                } catch (error) {
-                    await loadData();
-                    alert('Errore nel salvataggio dettagli');
-                }
-            }, [selectedLavoro, loadData]);
-
-            const getSteps = useCallback((lavoro) => {
-                if (lavoro.TipoLavoro === 'TRADIZIONALE') {
-                    return {
-                        step1: true,
-                        step2: lavoro.StatoCAD === 'RICEVUTO',
-                        step3: lavoro.StatoStampa === 'CONSEGNATA'
-                    };
-                } else {
-                    return {
-                        step1: true,
-                        step2: lavoro.StatoCAD === 'RICEVUTO',
-                        step3: lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA',
-                        step4: lavoro.StatoStampa === 'CONSEGNATA'
-                    };
-                }
-            }, []);
-
-            const isStepOverdue = useCallback((lavoro, step) => {
-                const oggi = new Date();
-                switch(step) {
-                    case 2:
-                        return lavoro.StatoCAD !== 'RICEVUTO' && lavoro.DataRichiestaCAD && oggi > new Date(lavoro.DataRichiestaCAD);
-                    case 3:
-                        return lavoro.StatoStampa !== 'COMPLETATA' && lavoro.StatoStampa !== 'CONSEGNATA' && lavoro.DataPromemoriStampa && oggi > new Date(lavoro.DataPromemoriStampa);
-                    case 4:
-                        return lavoro.StatoStampa !== 'CONSEGNATA' && lavoro.DataPromemoriaFinale && oggi > new Date(lavoro.DataPromemoriaFinale);
-                    default:
-                        return false;
-                }
-            }, []);
-
-            const getStepColor = useCallback((lavoro, stepNumber) => {
-                const steps = getSteps(lavoro);
-                const isCompleted = steps[`step${stepNumber}`];
-                
-                // LOGICA SEMPLIFICATA PER RISOLVERE IL PROBLEMA ARANCIONE
-                if (lavoro.TipoLavoro === '3D' && stepNumber === 3) {
-                    if (lavoro.StatoStampa === 'IN_CORSO') {
-                        return 'bg-orange-500'; // Arancione forzato dal CSS
-                    } else if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
-                        return 'bg-green-500';
-                    } else {
-                        return 'bg-gray-500';
-                    }
-                }
-                
-                if (isStepOverdue(lavoro, stepNumber)) {
-                    return 'bg-red-500 animate-pulse';
-                } else if (isCompleted) {
-                    return 'bg-green-500';
-                } else {
-                    return 'bg-gray-500';
-                }
-            }, [getSteps, isStepOverdue]);
-
-            const getDaysUntilDelivery = useCallback((dataConsegna) => {
-                if (!dataConsegna) return null;
-                const today = new Date();
-                const delivery = new Date(dataConsegna);
-                const diffTime = delivery - today;
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                return diffDays;
-            }, []);
-
-            const currentList = showArchived ? lavoriArchiviati : lavori;
-            const stats = {
-                totale: lavori.length,
-                inAttesa: lavori.filter(l => l.StatoCAD === 'ATTESA').length,
-                inCorso: lavori.filter(l => l.StatoStampa === 'IN_CORSO').length,
-                archiviati: lavoriArchiviati.length
-            };
-
-            return (
-                <div className="min-h-screen bg-gray-50">
-                    <div className="bg-white shadow-sm border-b">
-                        <div className="max-w-7xl mx-auto px-4 py-3">
-                            <h1 className="text-xl font-bold text-gray-900">🦷 Dashboard Prescrizioni 3D</h1>
-                            <p className="text-xs text-gray-600">Gestione lavori odontoiatrici digitali</p>
-                        </div>
-                    </div>
-
-                    <div className="max-w-7xl mx-auto px-4 py-4">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                            <div className="bg-white rounded-lg shadow-sm p-3">
-                                <div className="flex items-center">
-                                    <div className="p-1.5 bg-blue-100 rounded-lg">
-                                        <i className="fas fa-cube text-blue-600 text-sm"></i>
-                                    </div>
-                                    <div className="ml-2">
-                                        <p className="text-xs font-medium text-gray-600">Totale</p>
-                                        <p className="text-xl font-bold text-gray-900">{stats.totale}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-white rounded-lg shadow-sm p-3">
-                                <div className="flex items-center">
-                                    <div className="p-1.5 bg-yellow-100 rounded-lg">
-                                        <i className="fas fa-clock text-yellow-600 text-sm"></i>
-                                    </div>
-                                    <div className="ml-2">
-                                        <p className="text-xs font-medium text-gray-600">CAD Attesa</p>
-                                        <p className="text-xl font-bold text-gray-900">{stats.inAttesa}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-white rounded-lg shadow-sm p-3">
-                                <div className="flex items-center">
-                                    <div className="p-1.5 bg-green-100 rounded-lg">
-                                        <i className="fas fa-print text-green-600 text-sm"></i>
-                                    </div>
-                                    <div className="ml-2">
-                                        <p className="text-xs font-medium text-gray-600">Stampa</p>
-                                        <p className="text-xl font-bold text-gray-900">{stats.inCorso}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="bg-white rounded-lg shadow-sm p-3">
-                                <div className="flex items-center">
-                                    <div className="p-1.5 bg-gray-100 rounded-lg">
-                                        <i className="fas fa-archive text-gray-600 text-sm"></i>
-                                    </div>
-                                    <div className="ml-2">
-                                        <p className="text-xs font-medium text-gray-600">Archiviati</p>
-                                        <p className="text-xl font-bold text-gray-900">{stats.archiviati}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {!showArchived && <CalendarioFullCalendar lavori={lavori} onUpdateDataConsegna={updateDataConsegna} />}
-
-                        <div className="bg-white rounded-lg shadow-sm p-3 mb-4">
-                            <div className="flex gap-4 items-center">
-                                <div className="flex space-x-2">
-                                    <button 
-                                        onClick={() => setShowArchived(false)}
-                                        className={`px-3 py-1.5 rounded text-sm font-medium ${!showArchived ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
-                                    >
-                                        🔄 Attivi ({stats.totale})
-                                    </button>
-                                    <button 
-                                        onClick={() => setShowArchived(true)}
-                                        className={`px-3 py-1.5 rounded text-sm font-medium ${showArchived ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}
-                                    >
-                                        📦 Archivio ({stats.archiviati})
-                                    </button>
-                                </div>
-                                
-                                <button 
-                                    onClick={loadData}
-                                    disabled={loading}
-                                    className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white px-3 py-1.5 rounded text-sm"
-                                >
-                                    <i className={`fas fa-sync-alt mr-1 ${loading ? 'animate-spin' : ''}`}></i>
-                                    {loading ? 'Caricamento...' : 'Ricarica da Airtable'}
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3">
-                            {currentList.length === 0 ? (
-                                <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-                                    <i className="fas fa-search text-gray-400 text-3xl mb-3"></i>
-                                    <p className="text-gray-600">Nessun lavoro trovato</p>
-                                </div>
-                            ) : (
-                                currentList.map(lavoro => (
-                                    <CardLavoro
-                                        key={lavoro.id}
-                                        lavoro={lavoro}
-                                        onToggleStep={toggleStep}
-                                        onUpdateStatus={updateStatus}
-                                        onOpenModal={(lavoro) => {
-                                            setSelectedLavoro(lavoro);
-                                            setShowModal(true);
-                                        }}
-                                        getDaysUntilDelivery={getDaysUntilDelivery}
-                                        getSteps={getSteps}
-                                        getStepColor={getStepColor}
-                                    />
-                                ))
-                            )}
-                        </div>
-                    </div>
-
-                    <ModalDettaglio
-                        open={showModal}
-                        lavoro={selectedLavoro}
-                        onSave={handleSaveModal}
-                        onClose={() => setShowModal(false)}
-                    />
-                </div>
-            );
-        }
-
-        ReactDOM.render(<Dashboard />, document.getElementById('root'));
-    </script>
-</body>
-</html>
+                            fields: {

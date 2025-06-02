@@ -371,7 +371,7 @@
                     console.log('🖱️ Long press detected - enabling drag');
                     setIsDraggable(true);
                     setSelectedLavoro(lavoro); // Set per il drag
-                }, 500); // 500ms per long press
+                }, 400); // 400ms per long press
                 
                 setLongPressTimer(timer);
                 setSelectedLavoro(lavoro); // Set per il click
@@ -1116,21 +1116,21 @@
                 if (lavoro.TipoLavoro === '3D' && stepNumber === 3) {
                     // Fix per pallino stampa - TUTTI i casi con colori espliciti
                     if (lavoro.StatoStampa === 'IN_CORSO') {
-                        return 'bg-orange-500'; // Arancione per "in corso"
+                        return 'bg-orange-500 text-white'; // Arancione per "in corso"
                     } else if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
-                        return 'bg-green-500'; // Verde per "completata"
+                        return 'bg-green-500 text-white'; // Verde per "completata"
                     } else { // NON_INIZIATA o qualsiasi altro stato
-                        return 'bg-gray-500'; // Grigio per "non iniziata"
+                        return 'bg-gray-500 text-white'; // Grigio per "non iniziata"
                     }
                 }
                 
                 // Logica standard per altri pallini
                 if (isStepOverdue(lavoro, stepNumber)) {
-                    return 'bg-red-500 animate-pulse';
+                    return 'bg-red-500 animate-pulse text-white';
                 } else if (isCompleted) {
-                    return 'bg-green-500';
+                    return 'bg-green-500 text-white';
                 } else {
-                    return 'bg-gray-500';
+                    return 'bg-gray-500 text-white';
                 }
             }, [getSteps, isStepOverdue]);
 

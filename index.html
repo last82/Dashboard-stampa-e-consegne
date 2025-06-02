@@ -410,13 +410,16 @@
                             </div>
                         </div>
                         <div className="flex space-x-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                lavoro.StatoCAD === 'RICEVUTO' ? 'bg-green-100 text-green-800' :
-                                lavoro.StatoCAD === 'ATTESA' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-red-100 text-red-800'
-                            }`}>
-                                CAD: {lavoro.StatoCAD}
-                            </span>
+                            {/* Badge CAD solo per lavori 3D */}
+                            {lavoro.TipoLavoro === '3D' && (
+                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                    lavoro.StatoCAD === 'RICEVUTO' ? 'bg-green-100 text-green-800' :
+                                    lavoro.StatoCAD === 'ATTESA' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-red-100 text-red-800'
+                                }`}>
+                                    CAD: {lavoro.StatoCAD}
+                                </span>
+                            )}
                             
                             {/* Badge Stampa solo per lavori 3D */}
                             {lavoro.TipoLavoro === '3D' && (
@@ -439,7 +442,17 @@
                                 </span>
                             )}
                             
-                            {/* ✅ Badge Ricezione per tutti i lavori */}
+                            {/* ✅ Badge Lavoro per TRADIZIONALI */}
+                            {lavoro.TipoLavoro === 'TRADIZIONALE' && (
+                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                    lavoro.StatoCAD === 'RICEVUTO' ? 'bg-green-100 text-green-800' :
+                                    'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                    {lavoro.StatoCAD === 'RICEVUTO' ? '✅ Arrivato' : '🚛 In arrivo'}
+                                </span>
+                            )}
+                            
+                            {/* Badge Ricezione per tutti i lavori */}
                             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                                 lavoro.StatoRicezione === 'RICEVUTA' ? 'bg-green-100 text-green-800' :
                                 'bg-gray-100 text-gray-800'
@@ -533,6 +546,15 @@
                             {lavoro.TipoLavoro === '3D' ? (
                                 <>
                                     <select 
+                                        value={lavoro.StatoRicezione}
+                                        onChange={(e) => onUpdateStatus(lavoro.id, 'StatoRicezione', e.target.value)}
+                                        className="text-xs border rounded px-2 py-1"
+                                    >
+                                        <option value="NON_RICEVUTA">📥 Non ricevuta</option>
+                                        <option value="RICEVUTA">✅ Ricevuta in LAB</option>
+                                    </select>
+                                    
+                                    <select 
                                         value={lavoro.StatoCAD}
                                         onChange={(e) => onUpdateStatus(lavoro.id, 'StatoCAD', e.target.value)}
                                         className="text-xs border rounded px-2 py-1"
@@ -578,7 +600,7 @@
                                         onChange={(e) => onUpdateStatus(lavoro.id, 'StatoCAD', e.target.value)}
                                         className="text-xs border rounded px-2 py-1"
                                     >
-                                        <option value="ATTESA">Lavoro: In attesa</option>
+                                        <option value="ATTESA">Lavoro: In arrivo</option>
                                         <option value="RICEVUTO">Lavoro: Arrivato</option>
                                     </select>
                                     

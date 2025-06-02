@@ -312,7 +312,14 @@
             const handleDragEnd = () => {
                 setDraggedItem(null);
                 setDropTarget(null);
-                setIsDraggable(false);
+                // Reset dopo un delay
+                setTimeout(() => {
+                    setIsDraggable(false);
+                    // Reset draggable sui badge
+                    document.querySelectorAll('.delivery-badge').forEach(el => {
+                        el.draggable = false;
+                    });
+                }, 100);
             };
 
             const handleDragOver = (e, date) => {
@@ -370,7 +377,9 @@
                 const timer = setTimeout(() => {
                     console.log('🖱️ Long press detected - enabling drag');
                     setIsDraggable(true);
-                    setSelectedLavoro(lavoro); // Set per il drag
+                    // Forza il drag element a essere draggable
+                    const element = e.currentTarget;
+                    element.draggable = true;
                 }, 400); // 400ms per long press
                 
                 setLongPressTimer(timer);
@@ -389,11 +398,6 @@
                         setShowDatePicker(true);
                     }
                 }
-                
-                // Reset drag state
-                setTimeout(() => {
-                    setIsDraggable(false);
-                }, 100);
             };
 
             const handleMouseLeave = () => {
@@ -401,10 +405,6 @@
                     clearTimeout(longPressTimer);
                     setLongPressTimer(null);
                 }
-                // Reset drag state dopo un delay
-                setTimeout(() => {
-                    setIsDraggable(false);
-                }, 100);
             };
 
             const handleDatePickerSave = async (newDate) => {
@@ -502,7 +502,7 @@
                                         {deliveries.map(lavoro => (
                                             <div 
                                                 key={lavoro.id}
-                                                draggable={isDraggable}
+                                                draggable={false}
                                                 onMouseDown={(e) => handleMouseDown(lavoro, e)}
                                                 onMouseUp={(e) => handleMouseUp(lavoro, e)}
                                                 onMouseLeave={handleMouseLeave}

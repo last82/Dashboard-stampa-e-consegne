@@ -977,24 +977,24 @@
                 const steps = getSteps(lavoro);
                 const isCompleted = steps[`step${stepNumber}`];
                 
-                // Gestione colori per pallino stampa (3D)
                 if (lavoro.TipoLavoro === '3D' && stepNumber === 3) {
+                    // Fix per pallino stampa - TUTTI i casi con colori espliciti
                     if (lavoro.StatoStampa === 'IN_CORSO') {
-                        return 'in-progress'; // Classe CSS per arancione
+                        return 'bg-orange-500'; // Arancione per "in corso"
                     } else if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
-                        return 'completed';
-                    } else {
-                        return 'pending';
+                        return 'bg-green-500'; // Verde per "completata"
+                    } else { // NON_INIZIATA o qualsiasi altro stato
+                        return 'bg-gray-500'; // Grigio per "non iniziata"
                     }
                 }
                 
                 // Logica standard per altri pallini
                 if (isStepOverdue(lavoro, stepNumber)) {
-                    return 'overdue';
+                    return 'bg-red-500 animate-pulse';
                 } else if (isCompleted) {
-                    return 'completed';
+                    return 'bg-green-500';
                 } else {
-                    return 'pending';
+                    return 'bg-gray-500';
                 }
             }, [getSteps, isStepOverdue]);
 

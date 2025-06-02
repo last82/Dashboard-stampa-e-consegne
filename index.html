@@ -269,6 +269,36 @@
                 return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             }
 
+            // ✅ Nuova funzione per verificare se una fase è in ritardo
+            function isPhaseOverdue(lavoro, phase) {
+                if (lavoro.TipoLavoro !== '3D') return false;
+                
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                switch(phase) {
+                    case 'richiesta':
+                        return lavoro.DataRichiestaCAD && 
+                               new Date(lavoro.DataRichiestaCAD) < today && 
+                               lavoro.StatoCAD === 'ATTESA';
+                    case 'verifica':
+                        return lavoro.DataVerificaFile && 
+                               new Date(lavoro.DataVerificaFile) < today && 
+                               lavoro.StatoCAD === 'RICEVUTO' && 
+                               lavoro.StatoStampa === 'NON_INIZIATA';
+                    case 'stampa':
+                        return lavoro.DataPromemoriStampa && 
+                               new Date(lavoro.DataPromemoriStampa) < today && 
+                               lavoro.StatoStampa === 'NON_INIZIATA';
+                    case 'finale':
+                        return lavoro.DataPromemoriaFinale && 
+                               new Date(lavoro.DataPromemoriaFinale) < today && 
+                               lavoro.StatoStampa !== 'CONSEGNATA';
+                    default:
+                        return false;
+                }
+            }
+
             function getSteps(lavoro) {
                 if (lavoro.TipoLavoro === 'TRADIZIONALE') {
                     return {
@@ -290,6 +320,16 @@
             function getStepColor(lavoro, stepNumber) {
                 const steps = getSteps(lavoro);
                 const isCompleted = steps[`step${stepNumber}`];
+                
+                // ✅ Verifica ritardi per lavori 3D usando le date timeline
+                if (lavoro.TipoLavoro === '3D') {
+                    const phases = ['', 'richiesta', 'verifica', 'stampa', 'finale'];
+                    const currentPhase = phases[stepNumber];
+                    
+                    if (currentPhase && isPhaseOverdue(lavoro, currentPhase)) {
+                        return 'bg-red-500'; // Rosso per ritardo
+                    }
+                }
                 
                 if (lavoro.TipoLavoro === '3D' && stepNumber === 3) {
                     if (lavoro.StatoStampa === 'IN_CORSO') {
@@ -409,22 +449,41 @@
                                 const labels = ['', 'Inviata', 'CAD', 'Stampa', 'Consegna'];
                                 const stepColor = getStepColor(lavoro, stepNum);
                                 
+                                // ✅ Date timeline per lavori 3D
+                                const timelineDates = [
+                                    null,
+                                    lavoro.DataRichiestaCAD,
+                                    lavoro.DataVerificaFile, 
+                                    lavoro.DataPromemoriStampa,
+                                    lavoro.DataPromemoriaFinale
+                                ];
+                                const stepDate = timelineDates[stepNum];
+                                const phases = ['', 'richiesta', 'verifica', 'stampa', 'finale'];
+                                const isOverdue = isPhaseOverdue(lavoro, phases[stepNum]);
+                                
                                 return (
                                     <React.Fragment key={stepNum}>
                                         <div className="flex flex-col items-center">
                                             <div 
-                                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm timeline-step ${stepColor}`}
+                                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm timeline-step ${stepColor} ${isOverdue ? 'animate-pulse' : ''}`}
                                                 onClick={() => stepNum > 1 && onToggleStep(lavoro.id, stepNum, lavoro.TipoLavoro)}
-                                                title={`Click per modificare: ${labels[stepNum]}`}
+                                                title={`${labels[stepNum]}${stepDate ? '\nScadenza: ' + new Date(stepDate).toLocaleDateString('it-IT') : ''}${isOverdue ? '\n⚠️ IN RITARDO!' : ''}`}
                                                 style={{ cursor: stepNum > 1 ? 'pointer' : 'default' }}
                                             >
                                                 {isCompleted || (stepNum === 3 && lavoro.StatoStampa === 'IN_CORSO') ? 
                                                     <i className="fas fa-check"></i> : stepNum}
                                             </div>
                                             <div className="text-xs mt-1 text-center max-w-16">
-                                                <div className="font-medium text-gray-700 leading-tight">
+                                                <div className={`font-medium leading-tight ${isOverdue ? 'text-red-600' : 'text-gray-700'}`}>
                                                     {labels[stepNum]}
                                                 </div>
+                                                {/* ✅ Mostra data scadenza solo per lavori 3D */}
+                                                {stepDate && (
+                                                    <div className={`text-xs leading-tight ${isOverdue ? 'text-red-500 font-bold' : 'text-gray-500'}`}>
+                                                        {new Date(stepDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })}
+                                                        {isOverdue && <div>⚠️</div>}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                         {stepNum < 4 && <div className="flex-1 h-0.5 bg-gray-300 mx-2"></div>}
@@ -494,10 +553,26 @@
                         {lavoro.TipoLavoro === '3D' && (
                             <button 
                                 className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
-                                onClick={() => alert('Modal dettagli - Verrà implementato nel prossimo step!')}
+                                onClick={() => {
+                                    const timelineInfo = [
+                                        `📋 Lavoro 3D: ${lavoro.CodicePaziente}`,
+                                        `📅 Consegna: ${lavoro.DataConsegna ? new Date(lavoro.DataConsegna).toLocaleDateString('it-IT') : 'Non definita'}`,
+                                        ``,
+                                        `🗓️ TIMELINE CALCOLATA:`,
+                                        `📥 Richiesta CAD: ${lavoro.DataRichiestaCAD ? new Date(lavoro.DataRichiestaCAD).toLocaleDateString('it-IT') : 'N/A'}`,
+                                        `✅ Verifica File: ${lavoro.DataVerificaFile ? new Date(lavoro.DataVerificaFile).toLocaleDateString('it-IT') : 'N/A'}`,
+                                        `🖨️ Promemoria Stampa: ${lavoro.DataPromemoriStampa ? new Date(lavoro.DataPromemoriStampa).toLocaleDateString('it-IT') : 'N/A'}`,
+                                        `🏁 Promemoria Finale: ${lavoro.DataPromemoriaFinale ? new Date(lavoro.DataPromemoriaFinale).toLocaleDateString('it-IT') : 'N/A'}`,
+                                        ``,
+                                        `📁 Path CAD: ${lavoro.PathFileCAD || 'Non specificato'}`,
+                                        `📝 Note: ${lavoro.NoteStampa || 'Nessuna nota'}`
+                                    ].join('\n');
+                                    
+                                    alert(timelineInfo);
+                                }}
                             >
-                                <i className="fas fa-edit mr-1"></i>
-                                Dettagli
+                                <i className="fas fa-info-circle mr-1"></i>
+                                Timeline
                             </button>
                         )}
                     </div>
@@ -545,7 +620,14 @@
                             TipoLavoro: prescrizione.TipoLavoro || '3D',
                             StatoCAD: record.fields.StatoCAD || 'ATTESA',
                             StatoStampa: record.fields.StatoStampa || 'NON_INIZIATA',
-                            StatoSpedizione: record.fields.StatoSpedizione || 'NON_SPEDITO', // Nuovo campo
+                            StatoSpedizione: record.fields.StatoSpedizione || 'NON_SPEDITO',
+                            // ✅ Nuovi campi timeline dal workflow n8n
+                            DataRichiestaCAD: record.fields.DataRichiestaCAD || null,
+                            DataVerificaFile: record.fields.DataVerificaFile || null,
+                            DataPromemoriStampa: record.fields.DataPromemoriStampa || null,
+                            DataPromemoriaFinale: record.fields.DataPromemoriaFinale || null,
+                            PathFileCAD: record.fields.PathFileCAD || '',
+                            NoteStampa: record.fields.NoteStampa || '',
                             Archiviato: record.fields.Archiviato || false
                         };
                     });

@@ -119,6 +119,7 @@
         function CalendarioFullCalendar({ lavori, onUpdateDataConsegna }) {
             const calendarRef = useRef(null);
             const [calendar, setCalendar] = useState(null);
+            const [calendarInitialized, setCalendarInitialized] = useState(false);
 
             function getEventColor(lavoro) {
                 if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
@@ -132,25 +133,11 @@
                 }
             }
 
-            const events = useMemo(() => {
-                return lavori.map(lavoro => ({
-                    id: lavoro.id,
-                    title: lavoro.CodicePaziente,
-                    date: lavoro.DataConsegna,
-                    backgroundColor: getEventColor(lavoro),
-                    borderColor: getEventColor(lavoro),
-                    textColor: '#ffffff',
-                    extendedProps: {
-                        laboratorio: lavoro.Laboratorio,
-                        tipoLavoro: lavoro.TipoLavoro,
-                        statoCAD: lavoro.StatoCAD,
-                        statoStampa: lavoro.StatoStampa
-                    }
-                }));
-            }, [lavori]);
-
+            // Inizializzazione del calendario - solo una volta
             useEffect(() => {
-                if (calendarRef.current && !calendar && window.FullCalendar) {
+                if (calendarRef.current && !calendar && !calendarInitialized && window.FullCalendar) {
+                    console.log('🗓️ Inizializzazione calendario...');
+                    
                     const newCalendar = new window.FullCalendar.Calendar(calendarRef.current, {
                         initialView: 'dayGridMonth',
                         locale: 'it',
@@ -164,7 +151,6 @@
                         moreLinkClick: 'popover',
                         editable: true,
                         droppable: true,
-                        events: events,
                         
                         eventDrop: async function(info) {
                             const newDate = info.event.startStr;
@@ -202,22 +188,52 @@
 
                     newCalendar.render();
                     setCalendar(newCalendar);
+                    setCalendarInitialized(true);
+                    console.log('✅ Calendario inizializzato!');
                 }
 
+                // Cleanup solo al unmount del componente
                 return () => {
-                    if (calendar) {
+                    if (calendar && calendarInitialized) {
+                        console.log('🗑️ Distruzione calendario...');
                         calendar.destroy();
                         setCalendar(null);
+                        setCalendarInitialized(false);
                     }
                 };
-            }, [events, onUpdateDataConsegna]);
+            }, []); // Dipendenze vuote - si esegue solo al mount
 
+            // Aggiornamento eventi quando cambiano i lavori
             useEffect(() => {
-                if (calendar && events) {
+                if (calendar && calendarInitialized && lavori.length > 0) {
+                    console.log('🔄 Aggiornamento eventi calendario...', lavori.length, 'lavori');
+                    
+                    // Rimuove tutti gli eventi esistenti
                     calendar.removeAllEvents();
+                    
+                    // Crea nuovi eventi
+                    const events = lavori
+                        .filter(lavoro => lavoro.DataConsegna) // Solo lavori con data
+                        .map(lavoro => ({
+                            id: lavoro.id,
+                            title: lavoro.CodicePaziente,
+                            date: lavoro.DataConsegna,
+                            backgroundColor: getEventColor(lavoro),
+                            borderColor: getEventColor(lavoro),
+                            textColor: '#ffffff',
+                            extendedProps: {
+                                laboratorio: lavoro.Laboratorio,
+                                tipoLavoro: lavoro.TipoLavoro,
+                                statoCAD: lavoro.StatoCAD,
+                                statoStampa: lavoro.StatoStampa
+                            }
+                        }));
+                    
+                    // Aggiunge i nuovi eventi
                     calendar.addEventSource(events);
+                    console.log('✅ Eventi aggiornati:', events.length);
                 }
-            }, [lavori, calendar, events]);
+            }, [lavori, calendar, calendarInitialized]);
 
             return (
                 <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
@@ -230,6 +246,13 @@
                             <span>⚫ In attesa</span>
                         </div>
                     </div>
+                    
+                    {!calendarInitialized && (
+                        <div className="text-center py-8">
+                            <i className="fas fa-spinner fa-spin text-gray-400 text-2xl mb-2"></i>
+                            <p className="text-gray-600">Caricamento calendario...</p>
+                        </div>
+                    )}
                     
                     <div ref={calendarRef}></div>
                 </div>

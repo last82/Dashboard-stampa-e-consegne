@@ -946,18 +946,17 @@
                 const isCompleted = steps[`step${stepNumber}`];
                 
                 if (lavoro.TipoLavoro === '3D' && stepNumber === 3) {
-                    // Fix per pallino stampa - tutti i casi coperti
+                    // Fix per pallino stampa - TUTTI i casi con colori espliciti
                     if (lavoro.StatoStampa === 'IN_CORSO') {
                         return 'bg-orange-500'; // Arancione per "in corso"
                     } else if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
                         return 'bg-green-500'; // Verde per "completata"
-                    } else if (lavoro.StatoStampa === 'NON_INIZIATA') {
-                        return 'bg-gray-500'; // Grigio per "non iniziata" - FIX: era mancante!
-                    } else {
-                        return 'bg-gray-500'; // Default grigio
+                    } else { // NON_INIZIATA o qualsiasi altro stato
+                        return 'bg-gray-500'; // Grigio per "non iniziata"
                     }
                 }
                 
+                // Logica standard per altri pallini
                 if (isStepOverdue(lavoro, stepNumber)) {
                     return 'bg-red-500 animate-pulse';
                 } else if (isCompleted) {

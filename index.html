@@ -303,16 +303,18 @@
                 if (lavoro.TipoLavoro === 'TRADIZIONALE') {
                     return {
                         step1: true, // Sempre inviata
-                        step2: lavoro.StatoSpedizione === 'SPEDITO', // Spedita
-                        step3: lavoro.StatoCAD === 'RICEVUTO', // Arrivata
-                        step4: lavoro.StatoStampa === 'CONSEGNATA' // Consegna
+                        step2: lavoro.StatoRicezione === 'RICEVUTA', // ✅ Ricevuta in LAB
+                        step3: lavoro.StatoSpedizione === 'SPEDITO', // Spedita
+                        step4: lavoro.StatoCAD === 'RICEVUTO', // Arrivata
+                        step5: lavoro.StatoStampa === 'CONSEGNATA' // Consegna
                     };
                 } else {
                     return {
-                        step1: true,
-                        step2: lavoro.StatoCAD === 'RICEVUTO',
-                        step3: lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA',
-                        step4: lavoro.StatoStampa === 'CONSEGNATA'
+                        step1: true, // Sempre inviata
+                        step2: lavoro.StatoRicezione === 'RICEVUTA', // ✅ Ricevuta in LAB
+                        step3: lavoro.StatoCAD === 'RICEVUTO', // CAD
+                        step4: lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA', // Stampa
+                        step5: lavoro.StatoStampa === 'CONSEGNATA' // Consegna
                     };
                 }
             }
@@ -449,16 +451,17 @@
                                 const labels = ['', 'Inviata', 'CAD', 'Stampa', 'Consegna'];
                                 const stepColor = getStepColor(lavoro, stepNum);
                                 
-                                // ✅ Date timeline per lavori 3D
+                                // ✅ Date timeline per lavori 3D (ora 5 step)
                                 const timelineDates = [
                                     null,
+                                    null, // Ricezione non ha data specifica
                                     lavoro.DataRichiestaCAD,
                                     lavoro.DataVerificaFile, 
                                     lavoro.DataPromemoriStampa,
                                     lavoro.DataPromemoriaFinale
                                 ];
                                 const stepDate = timelineDates[stepNum];
-                                const phases = ['', 'richiesta', 'verifica', 'stampa', 'finale'];
+                                const phases = ['', 'ricezione', 'richiesta', 'verifica', 'stampa', 'finale'];
                                 const isOverdue = isPhaseOverdue(lavoro, phases[stepNum]);
                                 
                                 return (
@@ -470,14 +473,14 @@
                                                 title={`${labels[stepNum]}${stepDate ? '\nScadenza: ' + new Date(stepDate).toLocaleDateString('it-IT') : ''}${isOverdue ? '\n⚠️ IN RITARDO!' : ''}`}
                                                 style={{ cursor: stepNum > 1 ? 'pointer' : 'default' }}
                                             >
-                                                {isCompleted || (stepNum === 3 && lavoro.StatoStampa === 'IN_CORSO') ? 
+                                                {isCompleted || (stepNum === 4 && lavoro.StatoStampa === 'IN_CORSO') ? 
                                                     <i className="fas fa-check"></i> : stepNum}
                                             </div>
                                             <div className="text-xs mt-1 text-center max-w-16">
                                                 <div className={`font-medium leading-tight ${isOverdue ? 'text-red-600' : 'text-gray-700'}`}>
                                                     {labels[stepNum]}
                                                 </div>
-                                                {/* ✅ Mostra data scadenza solo per lavori 3D */}
+                                                {/* Mostra data scadenza solo per lavori 3D */}
                                                 {stepDate && (
                                                     <div className={`text-xs leading-tight ${isOverdue ? 'text-red-500 font-bold' : 'text-gray-500'}`}>
                                                         {new Date(stepDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })}
@@ -486,7 +489,7 @@
                                                 )}
                                             </div>
                                         </div>
-                                        {stepNum < 4 && <div className="flex-1 h-0.5 bg-gray-300 mx-2"></div>}
+                                        {stepNum < 5 && <div className="flex-1 h-0.5 bg-gray-300 mx-2"></div>}
                                     </React.Fragment>
                                 );
                             })
@@ -621,13 +624,16 @@
                             StatoCAD: record.fields.StatoCAD || 'ATTESA',
                             StatoStampa: record.fields.StatoStampa || 'NON_INIZIATA',
                             StatoSpedizione: record.fields.StatoSpedizione || 'NON_SPEDITO',
-                            // ✅ Nuovi campi timeline dal workflow n8n
+                            StatoRicezione: record.fields.StatoRicezione || 'NON_RICEVUTA', // ✅ Nuovo campo
+                            // Campi timeline dal workflow n8n
                             DataRichiestaCAD: record.fields.DataRichiestaCAD || null,
                             DataVerificaFile: record.fields.DataVerificaFile || null,
                             DataPromemoriStampa: record.fields.DataPromemoriStampa || null,
                             DataPromemoriaFinale: record.fields.DataPromemoriaFinale || null,
                             PathFileCAD: record.fields.PathFileCAD || '',
                             NoteStampa: record.fields.NoteStampa || '',
+                            // ✅ Note prescrizione dalla tabella Prescrizioni
+                            NotePrescrizione: prescrizione.Note || '',
                             Archiviato: record.fields.Archiviato || false
                         };
                     });

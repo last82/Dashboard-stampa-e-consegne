@@ -485,6 +485,12 @@
         function Dashboard() {
             const [lavori, setLavori] = useState([]);
             const [loading, setLoading] = useState(true);
+            const lavoriRef = useRef(lavori); // Ref per evitare stale closure
+
+            // Aggiorna il ref ogni volta che cambiano i lavori
+            useEffect(() => {
+                lavoriRef.current = lavori;
+            }, [lavori]);
 
             const loadData = useCallback(async () => {
                 setLoading(true);
@@ -533,7 +539,7 @@
 
             const toggleStep = useCallback(async (id, stepNumber, tipoLavoro) => {
                 try {
-                    const lavoro = lavori.find(l => l.id === id);
+                    const lavoro = lavoriRef.current.find(l => l.id === id);
                     if (!lavoro) return;
 
                     let updateFields = {};
@@ -584,11 +590,11 @@
                     // Reload data in caso di errore
                     loadData();
                 }
-            }, [lavori, loadData]);
+            }, [loadData]);
 
             const updateStatus = useCallback(async (id, field, value) => {
                 try {
-                    const lavoro = lavori.find(l => l.id === id);
+                    const lavoro = lavoriRef.current.find(l => l.id === id);
                     if (!lavoro) return;
 
                     const updateFields = { [field]: value };
@@ -608,21 +614,21 @@
                     // Reload data in caso di errore
                     loadData();
                 }
-            }, [lavori, loadData]);
+            }, [loadData]);
 
             const updateDataConsegna = useCallback(async (lavoroId, newDate) => {
                 console.log('🔄 Inizio aggiornamento data consegna:', { lavoroId, newDate });
-                console.log('📋 State lavori attuale:', lavori.map(l => ({ id: l.id, codice: l.CodicePaziente, data: l.DataConsegna })));
+                console.log('📋 State lavori attuale:', lavoriRef.current.map(l => ({ id: l.id, codice: l.CodicePaziente, data: l.DataConsegna })));
                 
                 try {
-                    const lavoro = lavori.find(l => l.id === lavoroId);
+                    const lavoro = lavoriRef.current.find(l => l.id === lavoroId);
                     if (!lavoro) {
                         console.error('❌ Lavoro non trovato:', lavoroId);
-                        console.log('📋 IDs disponibili nel state:', lavori.map(l => l.id));
+                        console.log('📋 IDs disponibili nel state:', lavoriRef.current.map(l => l.id));
                         console.log('📋 Cerco ID:', lavoroId);
                         
                         // Proviamo a trovare per airtableId
-                        const lavoroByAirtableId = lavori.find(l => l.airtableId === lavoroId);
+                        const lavoroByAirtableId = lavoriRef.current.find(l => l.airtableId === lavoroId);
                         if (lavoroByAirtableId) {
                             console.log('✅ Trovato lavoro usando airtableId!', lavoroByAirtableId);
                             // Usa questo lavoro e continua
@@ -641,7 +647,7 @@
                     loadData();
                     throw error;
                 }
-            }, [lavori, loadData]);
+            }, [loadData]); // Rimossa dependenza da lavori perché usiamo il ref
 
             const updateDataConsegnaInternal = async (lavoro, lavoroId, newDate) => {
                 console.log('📋 Lavoro trovato:', {

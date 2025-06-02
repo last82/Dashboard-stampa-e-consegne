@@ -941,20 +941,20 @@
                 }
             }, []);
 
-            const getStepColor = useCallback((lavoro, stepNumber) => {
-                const steps = getSteps(lavoro);
-                const isCompleted = steps[`step${stepNumber}`];
-                
-                if (lavoro.TipoLavoro === '3D' && stepNumber === 3) {
-                    // Fix per pallino stampa - TUTTI i casi con colori espliciti
-                    if (lavoro.StatoStampa === 'IN_CORSO') {
-                        return 'bg-orange-500'; // Arancione per "in corso"
-                    } else if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
-                        return 'bg-green-500'; // Verde per "completata"
-                    } else { // NON_INIZIATA o qualsiasi altro stato
-                        return 'bg-gray-500'; // Grigio per "non iniziata"
-                    }
-                }
+         const getStepColor = useCallback((lavoro, stepNumber) => {
+    const steps = getSteps(lavoro);
+    const isCompleted = steps[`step${stepNumber}`];
+    
+    if (lavoro.TipoLavoro === '3D' && stepNumber === 3) {
+        // Fix per pallino stampa - TUTTI i casi con colori espliciti
+        if (lavoro.StatoStampa === 'IN_CORSO') {
+            return 'bg-orange-500 text-white'; // Aggiunto text-white come gli altri
+        } else if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
+            return 'bg-green-500 text-white'; // Verde per "completata"
+        } else { // NON_INIZIATA o qualsiasi altro stato
+            return 'bg-gray-500 text-white'; // Grigio per "non iniziata"
+        }
+    }
                 
                 // Logica standard per altri pallini
                 if (isStepOverdue(lavoro, stepNumber)) {

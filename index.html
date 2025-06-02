@@ -612,106 +612,122 @@
 
             const updateDataConsegna = useCallback(async (lavoroId, newDate) => {
                 console.log('🔄 Inizio aggiornamento data consegna:', { lavoroId, newDate });
+                console.log('📋 State lavori attuale:', lavori.map(l => ({ id: l.id, codice: l.CodicePaziente, data: l.DataConsegna })));
                 
                 try {
                     const lavoro = lavori.find(l => l.id === lavoroId);
                     if (!lavoro) {
                         console.error('❌ Lavoro non trovato:', lavoroId);
+                        console.log('📋 IDs disponibili nel state:', lavori.map(l => l.id));
+                        console.log('📋 Cerco ID:', lavoroId);
+                        
+                        // Proviamo a trovare per airtableId
+                        const lavoroByAirtableId = lavori.find(l => l.airtableId === lavoroId);
+                        if (lavoroByAirtableId) {
+                            console.log('✅ Trovato lavoro usando airtableId!', lavoroByAirtableId);
+                            // Usa questo lavoro e continua
+                            return await updateDataConsegnaInternal(lavoroByAirtableId, lavoroId, newDate);
+                        }
+                        
+                        alert('❌ Errore: Lavoro non trovato nel state locale');
                         return;
                     }
 
-                    console.log('📋 Lavoro trovato:', {
-                        id: lavoro.id,
-                        codice: lavoro.CodicePaziente,
-                        dataAttuale: lavoro.DataConsegna
-                    });
-
-                    // Update ottimistico
-                    setLavori(prev => prev.map(l => 
-                        l.id === lavoroId ? { ...l, DataConsegna: newDate } : l
-                    ));
-                    console.log('✅ Update ottimistico completato');
-
-                    // Trova e aggiorna record Prescrizioni
-                    console.log('🔍 Ricerca record in tabella Prescrizioni...');
-                    const response = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${PRESCRIZIONI_TABLE}`, {
-                        headers: {
-                            'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
+                    return await updateDataConsegnaInternal(lavoro, lavoroId, newDate);
                     
-                    if (!response.ok) {
-                        throw new Error(`Errore fetch prescrizioni: ${response.status} ${response.statusText}`);
-                    }
-                    
-                    const data = await response.json();
-                    console.log('📊 Dati ricevuti da Prescrizioni:', {
-                        totalRecords: data.records?.length || 0,
-                        cercoCodice: lavoro.CodicePaziente
-                    });
-
-                    const prescrizioneRecord = data.records?.find(record => {
-                        const recordCodice = record.fields.Codice;
-                        console.log('🔍 Confronto codici:', { recordCodice, cercoCodice: lavoro.CodicePaziente });
-                        return recordCodice === lavoro.CodicePaziente;
-                    });
-
-                    if (prescrizioneRecord) {
-                        console.log('✅ Record prescrizione trovato:', {
-                            id: prescrizioneRecord.id,
-                            codice: prescrizioneRecord.fields.Codice,
-                            dataAttuale: prescrizioneRecord.fields.DataConsegna
-                        });
-
-                        const updateResponse = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${PRESCRIZIONI_TABLE}/${prescrizioneRecord.id}`, {
-                            method: 'PATCH',
-                            headers: {
-                                'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                fields: {
-                                    DataConsegna: newDate
-                                }
-                            })
-                        });
-
-                        if (!updateResponse.ok) {
-                            throw new Error(`Errore update prescrizioni: ${updateResponse.status} ${updateResponse.statusText}`);
-                        }
-
-                        const updateResult = await updateResponse.json();
-                        console.log('✅ Data consegna aggiornata su Airtable:', {
-                            codice: lavoro.CodicePaziente,
-                            nuovaData: newDate,
-                            result: updateResult.fields.DataConsegna
-                        });
-
-                        // Mostra notifica di successo
-                        alert(`✅ Data consegna aggiornata per ${lavoro.CodicePaziente}: ${new Date(newDate).toLocaleDateString('it-IT')}`);
-                        
-                    } else {
-                        console.error('❌ Record prescrizione NON trovato per codice:', lavoro.CodicePaziente);
-                        console.log('📝 Codici disponibili:', data.records?.map(r => r.fields.Codice) || []);
-                        
-                        alert(`❌ Record non trovato in tabella Prescrizioni per il codice: ${lavoro.CodicePaziente}`);
-                        
-                        // Revert update ottimistico
-                        setLavori(prev => prev.map(l => 
-                            l.id === lavoroId ? { ...l, DataConsegna: lavoro.DataConsegna } : l
-                        ));
-                    }
                 } catch (error) {
                     console.error('❌ Errore completo aggiornamento data:', error);
                     alert(`❌ Errore aggiornamento data: ${error.message}`);
-                    
-                    // Reload data in caso di errore
-                    console.log('🔄 Ricarico dati da Airtable...');
                     loadData();
                     throw error;
                 }
             }, [lavori, loadData]);
+
+            const updateDataConsegnaInternal = async (lavoro, lavoroId, newDate) => {
+                console.log('📋 Lavoro trovato:', {
+                    id: lavoro.id,
+                    airtableId: lavoro.airtableId,
+                    codice: lavoro.CodicePaziente,
+                    dataAttuale: lavoro.DataConsegna
+                });
+
+                // Update ottimistico
+                setLavori(prev => prev.map(l => 
+                    l.id === lavoroId ? { ...l, DataConsegna: newDate } : l
+                ));
+                console.log('✅ Update ottimistico completato');
+
+                // Trova e aggiorna record Prescrizioni
+                console.log('🔍 Ricerca record in tabella Prescrizioni...');
+                const response = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${PRESCRIZIONI_TABLE}`, {
+                    headers: {
+                        'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Errore fetch prescrizioni: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('📊 Dati ricevuti da Prescrizioni:', {
+                    totalRecords: data.records?.length || 0,
+                    cercoCodice: lavoro.CodicePaziente
+                });
+
+                const prescrizioneRecord = data.records?.find(record => {
+                    const recordCodice = record.fields.Codice;
+                    console.log('🔍 Confronto codici:', { recordCodice, cercoCodice: lavoro.CodicePaziente });
+                    return recordCodice === lavoro.CodicePaziente;
+                });
+
+                if (prescrizioneRecord) {
+                    console.log('✅ Record prescrizione trovato:', {
+                        id: prescrizioneRecord.id,
+                        codice: prescrizioneRecord.fields.Codice,
+                        dataAttuale: prescrizioneRecord.fields.DataConsegna
+                    });
+
+                    const updateResponse = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${PRESCRIZIONI_TABLE}/${prescrizioneRecord.id}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            fields: {
+                                DataConsegna: newDate
+                            }
+                        })
+                    });
+
+                    if (!updateResponse.ok) {
+                        throw new Error(`Errore update prescrizioni: ${updateResponse.status} ${updateResponse.statusText}`);
+                    }
+
+                    const updateResult = await updateResponse.json();
+                    console.log('✅ Data consegna aggiornata su Airtable:', {
+                        codice: lavoro.CodicePaziente,
+                        nuovaData: newDate,
+                        result: updateResult.fields.DataConsegna
+                    });
+
+                    // Mostra notifica di successo
+                    alert(`✅ Data consegna aggiornata per ${lavoro.CodicePaziente}: ${new Date(newDate).toLocaleDateString('it-IT')}`);
+                    
+                } else {
+                    console.error('❌ Record prescrizione NON trovato per codice:', lavoro.CodicePaziente);
+                    console.log('📝 Codici disponibili:', data.records?.map(r => r.fields.Codice) || []);
+                    
+                    alert(`❌ Record non trovato in tabella Prescrizioni per il codice: ${lavoro.CodicePaziente}`);
+                    
+                    // Revert update ottimistico
+                    setLavori(prev => prev.map(l => 
+                        l.id === lavoroId ? { ...l, DataConsegna: lavoro.DataConsegna } : l
+                    ));
+                }
+            };
 
             return (
                 <div className="min-h-screen bg-gray-50">

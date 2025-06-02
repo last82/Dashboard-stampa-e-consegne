@@ -236,7 +236,18 @@
             );
         }
 
-        // Dashboard Principale
+                        <div className="space-y-3">
+                            {lavori.length === 0 ? (
+                                <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+                                    <i className="fas fa-search text-gray-400 text-3xl mb-3"></i>
+                                    <p className="text-gray-600">Nessun lavoro trovato</p>
+                                </div>
+                            ) : (
+                                lavori.map(lavoro => (
+                                    <CardLavoro key={lavoro.id} lavoro={lavoro} />
+                                ))
+                            )}
+                        </div>
         function Dashboard() {
             const [lavori, setLavori] = useState([]);
             const [loading, setLoading] = useState(true);
@@ -403,66 +414,61 @@
                             </div>
                         </div>
 
-        // Componente Card Lavoro Completa
-        function CardLavoro({ lavoro }) {
-            // Calcola giorni fino alla consegna
-            const getDaysUntilDelivery = (dataConsegna) => {
-                if (!dataConsegna) return null;
-                const today = new Date();
-                const delivery = new Date(dataConsegna);
-                const diffTime = delivery - today;
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                return diffDays;
-            };
+        // Helper functions per le card lavoro
+        const getDaysUntilDelivery = (dataConsegna) => {
+            if (!dataConsegna) return null;
+            const today = new Date();
+            const delivery = new Date(dataConsegna);
+            const diffTime = delivery - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
+        };
 
-            // Determina stati dei pallini
-            const getSteps = (lavoro) => {
-                if (lavoro.TipoLavoro === 'TRADIZIONALE') {
-                    return {
-                        step1: true, // Sempre inviata
-                        step2: lavoro.StatoCAD === 'RICEVUTO',
-                        step3: lavoro.StatoStampa === 'CONSEGNATA'
-                    };
-                } else {
-                    return {
-                        step1: true, // Sempre inviata
-                        step2: lavoro.StatoCAD === 'RICEVUTO',
-                        step3: lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA',
-                        step4: lavoro.StatoStampa === 'CONSEGNATA'
-                    };
-                }
-            };
+        const getSteps = (lavoro) => {
+            if (lavoro.TipoLavoro === 'TRADIZIONALE') {
+                return {
+                    step1: true,
+                    step2: lavoro.StatoCAD === 'RICEVUTO',
+                    step3: lavoro.StatoStampa === 'CONSEGNATA'
+                };
+            } else {
+                return {
+                    step1: true,
+                    step2: lavoro.StatoCAD === 'RICEVUTO',
+                    step3: lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA',
+                    step4: lavoro.StatoStampa === 'CONSEGNATA'
+                };
+            }
+        };
 
-            // Determina colore pallini
-            const getStepColor = (lavoro, stepNumber) => {
-                const steps = getSteps(lavoro);
-                const isCompleted = steps[`step${stepNumber}`];
-                
-                // Caso speciale per step 3 dei lavori 3D (stampa)
-                if (lavoro.TipoLavoro === '3D' && stepNumber === 3) {
-                    if (lavoro.StatoStampa === 'IN_CORSO') {
-                        return 'bg-orange-500'; // Arancione per "in corso"
-                    } else if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
-                        return 'bg-green-500'; // Verde per "completata"
-                    } else {
-                        return 'bg-gray-500'; // Grigio per "non iniziata"
-                    }
-                }
-                
-                // Logica standard per altri pallini
-                if (isCompleted) {
+        const getStepColor = (lavoro, stepNumber) => {
+            const steps = getSteps(lavoro);
+            const isCompleted = steps[`step${stepNumber}`];
+            
+            if (lavoro.TipoLavoro === '3D' && stepNumber === 3) {
+                if (lavoro.StatoStampa === 'IN_CORSO') {
+                    return 'bg-orange-500';
+                } else if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
                     return 'bg-green-500';
                 } else {
                     return 'bg-gray-500';
                 }
-            };
+            }
+            
+            if (isCompleted) {
+                return 'bg-green-500';
+            } else {
+                return 'bg-gray-500';
+            }
+        };
 
+        // Componente Card Lavoro Completa
+        function CardLavoro({ lavoro }) {
             const steps = getSteps(lavoro);
             const daysUntil = getDaysUntilDelivery(lavoro.DataConsegna);
 
             return (
                 <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500 card-hover">
-                    {/* Header con info principale */}
                     <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center space-x-3">
                             <div>
@@ -511,10 +517,8 @@
                         </div>
                     </div>
 
-                    {/* Timeline pallini */}
                     <div className="flex justify-between items-center mb-3">
                         {lavoro.TipoLavoro === 'TRADIZIONALE' ? (
-                            // Timeline per lavori tradizionali (3 step)
                             [1, 2, 3].map(stepNum => {
                                 const isCompleted = steps[`step${stepNum}`];
                                 const labels = ['', 'Inviata', 'Arrivata', 'Consegna'];
@@ -540,7 +544,6 @@
                                 );
                             })
                         ) : (
-                            // Timeline per lavori 3D (4 step)
                             [1, 2, 3, 4].map(stepNum => {
                                 const isCompleted = steps[`step${stepNum}`];
                                 const labels = ['', 'Inviata', 'CAD', 'Stampa', 'Consegna'];
@@ -569,7 +572,6 @@
                         )}
                     </div>
 
-                    {/* Footer con select stati (per ora solo visivi) */}
                     <div className="flex justify-between items-center">
                         <div className="flex space-x-2">
                             {lavoro.TipoLavoro === '3D' ? (

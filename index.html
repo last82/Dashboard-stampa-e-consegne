@@ -269,7 +269,7 @@
                 return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             }
 
-            // ✅ Nuova funzione per verificare se una fase è in ritardo
+            // ✅ Verifica ritardi per lavori 3D usando le date timeline
             function isPhaseOverdue(lavoro, phase) {
                 if (lavoro.TipoLavoro !== '3D') return false;
                 
@@ -277,20 +277,20 @@
                 today.setHours(0, 0, 0, 0);
                 
                 switch(phase) {
-                    case 'richiesta':
+                    case 'richiesta': // Step 3 per lavori 3D
                         return lavoro.DataRichiestaCAD && 
                                new Date(lavoro.DataRichiestaCAD) < today && 
                                lavoro.StatoCAD === 'ATTESA';
-                    case 'verifica':
+                    case 'verifica': // Step 4 per lavori 3D  
                         return lavoro.DataVerificaFile && 
                                new Date(lavoro.DataVerificaFile) < today && 
                                lavoro.StatoCAD === 'RICEVUTO' && 
                                lavoro.StatoStampa === 'NON_INIZIATA';
-                    case 'stampa':
+                    case 'stampa': // Step 4 per lavori 3D
                         return lavoro.DataPromemoriStampa && 
                                new Date(lavoro.DataPromemoriStampa) < today && 
                                lavoro.StatoStampa === 'NON_INIZIATA';
-                    case 'finale':
+                    case 'finale': // Step 5 per lavori 3D
                         return lavoro.DataPromemoriaFinale && 
                                new Date(lavoro.DataPromemoriaFinale) < today && 
                                lavoro.StatoStampa !== 'CONSEGNATA';
@@ -325,15 +325,20 @@
                 
                 // ✅ Verifica ritardi per lavori 3D usando le date timeline
                 if (lavoro.TipoLavoro === '3D') {
-                    const phases = ['', 'richiesta', 'verifica', 'stampa', 'finale'];
-                    const currentPhase = phases[stepNumber];
+                    // Mappatura corretta step → fase
+                    const stepToPhase = {
+                        3: 'richiesta', // CAD
+                        4: 'stampa',    // Stampa  
+                        5: 'finale'     // Finale
+                    };
+                    const currentPhase = stepToPhase[stepNumber];
                     
                     if (currentPhase && isPhaseOverdue(lavoro, currentPhase)) {
                         return 'bg-red-500'; // Rosso per ritardo
                     }
                 }
                 
-                if (lavoro.TipoLavoro === '3D' && stepNumber === 3) {
+                if (lavoro.TipoLavoro === '3D' && stepNumber === 4) {
                     if (lavoro.StatoStampa === 'IN_CORSO') {
                         return 'bg-orange-500';
                     } else if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {

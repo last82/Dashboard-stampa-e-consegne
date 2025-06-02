@@ -19,6 +19,29 @@
             transform: scale(1.1);
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
+        
+        /* COLORI FORZATI PER RISOLVERE IL PROBLEMA */
+        .bg-orange-500 {
+            background-color: #f97316 !important;
+            color: white !important;
+        }
+        .bg-green-500 {
+            background-color: #22c55e !important;
+            color: white !important;
+        }
+        .bg-gray-500 {
+            background-color: #6b7280 !important;
+            color: white !important;
+        }
+        .bg-red-500 {
+            background-color: #ef4444 !important;
+            color: white !important;
+        }
+        .bg-blue-500 {
+            background-color: #3b82f6 !important;
+            color: white !important;
+        }
+        
         .card-hover {
             transition: all 0.2s ease;
         }
@@ -36,6 +59,9 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
         }
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
     </style>
 </head>
 <body>
@@ -50,7 +76,7 @@
         const TIMELINE_TABLE = 'tblWW6GJIxgZR8hp8';
         const PRESCRIZIONI_TABLE = 'tblM2RwtcSmfw7OTs';
 
-        // API Helpers Migliorati
+        // API Helpers
         const fetchAirtableData = async (baseId, table, token) => {
             try {
                 const response = await fetch(`https://api.airtable.com/v0/${baseId}/${table}`, {
@@ -84,7 +110,7 @@
             }
         };
 
-        // Componente Modal Migliorato
+        // Componente Modal
         function ModalDettaglio({ open, lavoro, onSave, onClose }) {
             const [path, setPath] = useState('');
             const [note, setNote] = useState('');
@@ -147,7 +173,7 @@
             );
         }
 
-        // Componente Calendario Navigabile
+        // Componente Calendario
         function CalendarioNavigabile({ lavori, onUpdateDataConsegna }) {
             const [currentDate, setCurrentDate] = useState(new Date());
             const [draggedItem, setDraggedItem] = useState(null);
@@ -189,21 +215,12 @@
             };
 
             const getDeliveriesForDate = (date) => {
-                // Fix timezone: usa date locali invece di ISO per evitare shift
                 const year = date.getFullYear();
                 const month = String(date.getMonth() + 1).padStart(2, '0');
                 const day = String(date.getDate()).padStart(2, '0');
                 const dateStr = `${year}-${month}-${day}`;
                 
-                console.log(`🗓️ Cerca consegne per data: ${dateStr} (era: ${date.toISOString().split('T')[0]})`);
-                
-                return lavori.filter(lavoro => {
-                    const match = lavoro.DataConsegna === dateStr;
-                    if (match) {
-                        console.log(`✅ Trovato lavoro ${lavoro.CodicePaziente} per data ${dateStr}`);
-                    }
-                    return match;
-                });
+                return lavori.filter(lavoro => lavoro.DataConsegna === dateStr);
             };
 
             const getBadgeColor = (lavoro) => {
@@ -240,7 +257,6 @@
                 
                 if (!draggedItem) return;
 
-                // Fix timezone per consistency
                 const year = date.getFullYear();
                 const month = String(date.getMonth() + 1).padStart(2, '0');
                 const day = String(date.getDate()).padStart(2, '0');
@@ -248,8 +264,6 @@
                 
                 const today = new Date();
                 const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                
-                console.log(`🎯 Drop: newDateStr=${newDateStr}, todayStr=${todayStr}`);
                 
                 if (newDateStr < todayStr) {
                     const confirm = window.confirm(
@@ -453,7 +467,7 @@
                                     <React.Fragment key={stepNum}>
                                         <div className="flex flex-col items-center">
                                             <div 
-                                                className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm timeline-step ${stepColor}`}
+                                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm timeline-step ${stepColor}`}
                                                 onClick={() => stepNum > 1 && onToggleStep(lavoro.id, stepNum, lavoro.TipoLavoro)}
                                                 title={`Click per ${isCompleted ? 'annullare' : 'completare'}: ${labels[stepNum]}`}
                                             >
@@ -479,7 +493,7 @@
                                     <React.Fragment key={stepNum}>
                                         <div className="flex flex-col items-center">
                                             <div 
-                                                className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm timeline-step ${stepColor}`}
+                                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm timeline-step ${stepColor}`}
                                                 onClick={() => stepNum > 1 && onToggleStep(lavoro.id, stepNum, lavoro.TipoLavoro)}
                                                 title={`Click per modificare: ${labels[stepNum]}`}
                                             >
@@ -578,38 +592,21 @@
                         fetchAirtableData(AIRTABLE_BASE_ID, PRESCRIZIONI_TABLE, AIRTABLE_TOKEN)
                     ]);
                     
-                    console.log(`📊 LOADDATA: Timeline records: ${timelineData.length}, Prescrizioni records: ${prescrizioniData.length}`);
-                    
-                    // JOIN INTELLIGENTE: Gestisce duplicati scegliendo il record più appropriato
                     const prescrizioniMap = {};
                     prescrizioniData.forEach(record => {
                         const codice = record.fields.Codice;
                         if (codice) {
-                            // Se non esiste ancora, lo aggiungi
                             if (!prescrizioniMap[codice]) {
                                 prescrizioniMap[codice] = record.fields;
-                                console.log(`📝 LOADDATA: Primo record per ${codice}: DataConsegna=${record.fields.DataConsegna}`);
                             } else {
-                                // Se esiste già, scegli il migliore con questa logica:
-                                // 1. Preferisci record con DataConsegna più recente
-                                // 2. Se stesso DataConsegna, preferisci il più nuovo (ultimo createdTime)
                                 const esistente = prescrizioniMap[codice];
                                 const nuovoRecord = record.fields;
                                 
                                 const dataEsistente = new Date(esistente.DataConsegna || '1900-01-01');
                                 const dataNuova = new Date(nuovoRecord.DataConsegna || '1900-01-01');
                                 
-                                if (dataNuova > dataEsistente) {
-                                    // Data più recente vince
+                                if (dataNuova >= dataEsistente) {
                                     prescrizioniMap[codice] = nuovoRecord;
-                                    console.log(`🔄 LOADDATA: Record aggiornato per ${codice}: ${esistente.DataConsegna} → ${nuovoRecord.DataConsegna} (data più recente)`);
-                                } else if (dataNuova.getTime() === dataEsistente.getTime()) {
-                                    // Stessa data: preferisci quello con createdTime più recente
-                                    // (assumiamo che l'ultimo nel forEach sia il più recente)
-                                    prescrizioniMap[codice] = nuovoRecord;
-                                    console.log(`🔄 LOADDATA: Record aggiornato per ${codice}: stesso DataConsegna, preferisco il più recente`);
-                                } else {
-                                    console.log(`⏭️ LOADDATA: Mantengo record esistente per ${codice}: ${esistente.DataConsegna} è più recente di ${nuovoRecord.DataConsegna}`);
                                 }
                             }
                         }
@@ -619,7 +616,7 @@
                         const codice = record.fields.CodicePaziente;
                         const prescrizione = prescrizioniMap[codice] || {};
                         
-                        const formatted = {
+                        return {
                             id: record.id,
                             airtableId: record.id,
                             CodicePaziente: codice || 'N/A',
@@ -636,17 +633,6 @@
                             NoteStampa: record.fields.NoteStampa || '',
                             Archiviato: record.fields.Archiviato || false
                         };
-                        
-                        // Debug specifico per il record che stiamo testando
-                        if (codice === '583E1') {
-                            console.log(`🔍 LOADDATA: Lavoro 583E1 formattato:`, {
-                                id: formatted.id,
-                                DataConsegna: formatted.DataConsegna,
-                                prescrizioneOriginale: prescrizione.DataConsegna
-                            });
-                        }
-                        
-                        return formatted;
                     });
                     
                     const attivi = formattedData.filter(l => !l.Archiviato);
@@ -672,7 +658,6 @@
                 loadData();
             }, [loadData]);
 
-            // TEST DIRETTO: Aggiornamento data consegna con verifica completa
             const updateDataConsegna = useCallback(async (lavoroId, newDate) => {
                 console.log(`🔄 INIZIO aggiornamento data per lavoro ${lavoroId} → ${newDate}`);
                 
@@ -683,19 +668,15 @@
                         return;
                     }
 
-                    console.log(`📋 Lavoro trovato: ${lavoro.CodicePaziente}, DataConsegna attuale: ${lavoro.DataConsegna}`);
-
-                    // 1. Update ottimistico locale
+                    // Update ottimistico locale
                     setLavori(prev => {
                         const updated = prev.map(l => 
                             l.id === lavoroId ? { ...l, DataConsegna: newDate } : l
                         );
-                        console.log(`🔄 State locale aggiornato per ${lavoro.CodicePaziente}`);
                         return updated;
                     });
 
-                    // 2. TEST DIRETTO: Fetch e aggiorna Airtable step by step
-                    console.log(`🔍 Fetching tabella Prescrizioni...`);
+                    // Fetch tabella Prescrizioni
                     const response = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${PRESCRIZIONI_TABLE}`, {
                         headers: {
                             'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
@@ -709,28 +690,16 @@
                     }
 
                     const data = await response.json();
-                    console.log(`📊 Records Prescrizioni trovati:`, data.records?.length || 0);
-                    
-                    // 3. Cerca il record specifico
                     const prescrizioneRecord = data.records?.find(record => 
                         record.fields.Codice === lavoro.CodicePaziente
                     );
 
                     if (!prescrizioneRecord) {
                         console.error(`❌ Record NON trovato per codice: ${lavoro.CodicePaziente}`);
-                        console.log(`📋 Codici disponibili:`, data.records?.map(r => r.fields.Codice) || []);
                         return;
                     }
 
-                    console.log(`✅ Record trovato:`, {
-                        id: prescrizioneRecord.id,
-                        codice: prescrizioneRecord.fields.Codice,
-                        dataAttuale: prescrizioneRecord.fields.DataConsegna
-                    });
-
-                    // 4. UPDATE DIRETTO con verifica
-                    console.log(`🔄 Aggiornando record ${prescrizioneRecord.id} con data ${newDate}...`);
-                    
+                    // UPDATE
                     const updateResponse = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${PRESCRIZIONI_TABLE}/${prescrizioneRecord.id}`, {
                         method: 'PATCH',
                         headers: {
@@ -750,41 +719,15 @@
                         return;
                     }
 
-                    const updateResult = await updateResponse.json();
-                    console.log(`✅ SUCCESSO! Airtable aggiornato:`, {
-                        id: updateResult.id,
-                        nuovaData: updateResult.fields.DataConsegna
-                    });
-
-                    // 5. VERIFICA: Rileggi il record per confermare
-                    console.log(`🔍 Verifica: rileggo il record...`);
-                    const verifyResponse = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${PRESCRIZIONI_TABLE}/${prescrizioneRecord.id}`, {
-                        headers: {
-                            'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-
-                    if (verifyResponse.ok) {
-                        const verifyData = await verifyResponse.json();
-                        console.log(`✅ VERIFICA OK - Data in Airtable:`, verifyData.fields.DataConsegna);
-                        
-                        if (verifyData.fields.DataConsegna === newDate) {
-                            console.log(`🎉 SUCCESSO COMPLETO! Data aggiornata correttamente in Airtable`);
-                        } else {
-                            console.error(`❌ PROBLEMA! Data in Airtable (${verifyData.fields.DataConsegna}) ≠ Data richiesta (${newDate})`);
-                        }
-                    }
+                    console.log(`✅ SUCCESSO! Airtable aggiornato`);
 
                 } catch (error) {
                     console.error('❌ ERRORE COMPLETO:', error);
-                    // Rollback solo in caso di errore reale
                     await loadData();
                     throw error;
                 }
             }, [lavori, loadData]);
 
-            // Toggle degli stati
             const toggleStep = useCallback(async (id, stepNumber, tipoLavoro) => {
                 try {
                     const lavoro = lavori.find(l => l.id === id);
@@ -890,13 +833,11 @@
                 }
             }, [lavori]);
 
-            // Salvataggio modal
             const handleSaveModal = useCallback(async (updateFields) => {
                 if (!selectedLavoro) return;
                 
                 setShowModal(false);
                 
-                // Update ottimistico
                 setLavori(prev => prev.map(l => 
                     l.id === selectedLavoro.id ? { ...l, ...updateFields } : l
                 ));
@@ -909,7 +850,6 @@
                 }
             }, [selectedLavoro, loadData]);
 
-            // Helper functions
             const getSteps = useCallback((lavoro) => {
                 if (lavoro.TipoLavoro === 'TRADIZIONALE') {
                     return {
@@ -941,22 +881,21 @@
                 }
             }, []);
 
-         const getStepColor = useCallback((lavoro, stepNumber) => {
-    const steps = getSteps(lavoro);
-    const isCompleted = steps[`step${stepNumber}`];
-    
-    if (lavoro.TipoLavoro === '3D' && stepNumber === 3) {
-        // Fix per pallino stampa - TUTTI i casi con colori espliciti
-        if (lavoro.StatoStampa === 'IN_CORSO') {
-            return 'bg-orange-500 text-white'; // Aggiunto text-white come gli altri
-        } else if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
-            return 'bg-green-500 text-white'; // Verde per "completata"
-        } else { // NON_INIZIATA o qualsiasi altro stato
-            return 'bg-gray-500 text-white'; // Grigio per "non iniziata"
-        }
-    }
+            const getStepColor = useCallback((lavoro, stepNumber) => {
+                const steps = getSteps(lavoro);
+                const isCompleted = steps[`step${stepNumber}`];
                 
-                // Logica standard per altri pallini
+                // LOGICA SEMPLIFICATA PER RISOLVERE IL PROBLEMA ARANCIONE
+                if (lavoro.TipoLavoro === '3D' && stepNumber === 3) {
+                    if (lavoro.StatoStampa === 'IN_CORSO') {
+                        return 'bg-orange-500'; // Arancione forzato dal CSS
+                    } else if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
+                        return 'bg-green-500';
+                    } else {
+                        return 'bg-gray-500';
+                    }
+                }
+                
                 if (isStepOverdue(lavoro, stepNumber)) {
                     return 'bg-red-500 animate-pulse';
                 } else if (isCompleted) {

@@ -561,7 +561,7 @@
                     // Reload data in caso di errore
                     loadData();
                 }
-            }, [lavori]);
+            }, [lavori, loadData]);
 
             const updateStatus = useCallback(async (id, field, value) => {
                 try {
@@ -585,7 +585,7 @@
                     // Reload data in caso di errore
                     loadData();
                 }
-            }, [lavori]);
+            }, [lavori, loadData]);
 
             const updateDataConsegna = useCallback(async (lavoroId, newDate) => {
                 try {
@@ -632,43 +632,7 @@
                     loadData();
                     throw error;
                 }
-            }, [lavori]);if (!lavoro) return;
-
-                    setLavori(prev => prev.map(l => 
-                        l.id === lavoroId ? { ...l, DataConsegna: newDate } : l
-                    ));
-
-                    const response = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${PRESCRIZIONI_TABLE}`, {
-                        headers: {
-                            'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    
-                    const data = await response.json();
-                    const prescrizioneRecord = data.records?.find(record => 
-                        record.fields.Codice === lavoro.CodicePaziente
-                    );
-
-                    if (prescrizioneRecord) {
-                        await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${PRESCRIZIONI_TABLE}/${prescrizioneRecord.id}`, {
-                            method: 'PATCH',
-                            headers: {
-                                'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                fields: {
-                                    DataConsegna: newDate
-                                }
-                            })
-                        });
-                    }
-                } catch (error) {
-                    console.error('Errore aggiornamento:', error);
-                    throw error;
-                }
-            }, [lavori]);
+            }, [lavori, loadData]);
 
             return (
                 <div className="min-h-screen bg-gray-50">
@@ -754,7 +718,12 @@
                                 </div>
                             ) : (
                                 lavori.map(lavoro => (
-                                    <CardLavoro key={lavoro.id} lavoro={lavoro} />
+                                    <CardLavoro 
+                                        key={lavoro.id} 
+                                        lavoro={lavoro} 
+                                        onToggleStep={toggleStep}
+                                        onUpdateStatus={updateStatus}
+                                    />
                                 ))
                             )}
                         </div>

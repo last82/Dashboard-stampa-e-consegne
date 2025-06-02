@@ -403,53 +403,234 @@
                             </div>
                         </div>
 
-                        <div className="space-y-3">
-                            {lavori.length === 0 ? (
-                                <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-                                    <i className="fas fa-search text-gray-400 text-3xl mb-3"></i>
-                                    <p className="text-gray-600">Nessun lavoro trovato</p>
+        // Componente Card Lavoro Completa
+        function CardLavoro({ lavoro }) {
+            // Calcola giorni fino alla consegna
+            const getDaysUntilDelivery = (dataConsegna) => {
+                if (!dataConsegna) return null;
+                const today = new Date();
+                const delivery = new Date(dataConsegna);
+                const diffTime = delivery - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                return diffDays;
+            };
+
+            // Determina stati dei pallini
+            const getSteps = (lavoro) => {
+                if (lavoro.TipoLavoro === 'TRADIZIONALE') {
+                    return {
+                        step1: true, // Sempre inviata
+                        step2: lavoro.StatoCAD === 'RICEVUTO',
+                        step3: lavoro.StatoStampa === 'CONSEGNATA'
+                    };
+                } else {
+                    return {
+                        step1: true, // Sempre inviata
+                        step2: lavoro.StatoCAD === 'RICEVUTO',
+                        step3: lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA',
+                        step4: lavoro.StatoStampa === 'CONSEGNATA'
+                    };
+                }
+            };
+
+            // Determina colore pallini
+            const getStepColor = (lavoro, stepNumber) => {
+                const steps = getSteps(lavoro);
+                const isCompleted = steps[`step${stepNumber}`];
+                
+                // Caso speciale per step 3 dei lavori 3D (stampa)
+                if (lavoro.TipoLavoro === '3D' && stepNumber === 3) {
+                    if (lavoro.StatoStampa === 'IN_CORSO') {
+                        return 'bg-orange-500'; // Arancione per "in corso"
+                    } else if (lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA') {
+                        return 'bg-green-500'; // Verde per "completata"
+                    } else {
+                        return 'bg-gray-500'; // Grigio per "non iniziata"
+                    }
+                }
+                
+                // Logica standard per altri pallini
+                if (isCompleted) {
+                    return 'bg-green-500';
+                } else {
+                    return 'bg-gray-500';
+                }
+            };
+
+            const steps = getSteps(lavoro);
+            const daysUntil = getDaysUntilDelivery(lavoro.DataConsegna);
+
+            return (
+                <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500 card-hover">
+                    {/* Header con info principale */}
+                    <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center space-x-3">
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900">{lavoro.CodicePaziente}</h3>
+                                <div className="flex items-center space-x-3 text-sm text-gray-600">
+                                    <span>🏭 {lavoro.Laboratorio}</span>
+                                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                                        lavoro.TipoLavoro === '3D' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                                    }`}>
+                                        {lavoro.TipoLavoro === '3D' ? '🖨️ 3D' : '🔧 TRADIZIONALE'}
+                                    </span>
+                                    {lavoro.DataConsegna && (
+                                        <span className={`font-semibold px-2 py-1 rounded ${
+                                            daysUntil < 0 ? 'bg-red-100 text-red-800' :
+                                            daysUntil <= 2 ? 'bg-orange-100 text-orange-800' :
+                                            'bg-green-100 text-green-800'
+                                        }`}>
+                                            📅 {new Date(lavoro.DataConsegna).toLocaleDateString('it-IT')}
+                                            {daysUntil !== null && (
+                                                <span className="ml-1">
+                                                    ({daysUntil < 0 ? `${Math.abs(daysUntil)}gg fa` : 
+                                                      daysUntil === 0 ? 'Oggi' : 
+                                                      `${daysUntil}gg`})
+                                                </span>
+                                            )}
+                                        </span>
+                                    )}
                                 </div>
-                            ) : (
-                                lavori.map(lavoro => (
-                                    <div key={lavoro.id} className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500 card-hover">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <h3 className="text-lg font-bold text-gray-900">{lavoro.CodicePaziente}</h3>
-                                                <div className="flex items-center space-x-3 text-sm text-gray-600">
-                                                    <span>🏭 {lavoro.Laboratorio}</span>
-                                                    <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                                                        lavoro.TipoLavoro === '3D' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                                                    }`}>
-                                                        {lavoro.TipoLavoro === '3D' ? '🖨️ 3D' : '🔧 TRADIZIONALE'}
-                                                    </span>
-                                                    {lavoro.DataConsegna && (
-                                                        <span className="font-semibold px-2 py-1 rounded bg-green-100 text-green-800">
-                                                            📅 {new Date(lavoro.DataConsegna).toLocaleDateString('it-IT')}
-                                                        </span>
-                                                    )}
+                            </div>
+                        </div>
+                        <div className="flex space-x-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                lavoro.StatoCAD === 'RICEVUTO' ? 'bg-green-100 text-green-800' :
+                                lavoro.StatoCAD === 'ATTESA' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-red-100 text-red-800'
+                            }`}>
+                                CAD: {lavoro.StatoCAD}
+                            </span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA' ? 'bg-green-100 text-green-800' :
+                                lavoro.StatoStampa === 'IN_CORSO' ? 'bg-blue-100 text-blue-800' :
+                                'bg-gray-100 text-gray-800'
+                            }`}>
+                                Stampa: {lavoro.StatoStampa}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Timeline pallini */}
+                    <div className="flex justify-between items-center mb-3">
+                        {lavoro.TipoLavoro === 'TRADIZIONALE' ? (
+                            // Timeline per lavori tradizionali (3 step)
+                            [1, 2, 3].map(stepNum => {
+                                const isCompleted = steps[`step${stepNum}`];
+                                const labels = ['', 'Inviata', 'Arrivata', 'Consegna'];
+                                const stepColor = getStepColor(lavoro, stepNum);
+                                
+                                return (
+                                    <React.Fragment key={stepNum}>
+                                        <div className="flex flex-col items-center">
+                                            <div 
+                                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm timeline-step ${stepColor}`}
+                                                title={`${labels[stepNum]} - ${isCompleted ? 'Completato' : 'In attesa'}`}
+                                            >
+                                                {isCompleted ? <i className="fas fa-check"></i> : stepNum}
+                                            </div>
+                                            <div className="text-xs mt-1 text-center max-w-16">
+                                                <div className="font-medium text-gray-700 leading-tight">
+                                                    {labels[stepNum]}
                                                 </div>
                                             </div>
-                                            <div className="flex space-x-2">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                    lavoro.StatoCAD === 'RICEVUTO' ? 'bg-green-100 text-green-800' :
-                                                    lavoro.StatoCAD === 'ATTESA' ? 'bg-yellow-100 text-yellow-800' :
-                                                    'bg-red-100 text-red-800'
-                                                }`}>
-                                                    CAD: {lavoro.StatoCAD}
-                                                </span>
-                                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                    lavoro.StatoStampa === 'COMPLETATA' ? 'bg-green-100 text-green-800' :
-                                                    lavoro.StatoStampa === 'IN_CORSO' ? 'bg-blue-100 text-blue-800' :
-                                                    'bg-gray-100 text-gray-800'
-                                                }`}>
-                                                    Stampa: {lavoro.StatoStampa}
-                                                </span>
+                                        </div>
+                                        {stepNum < 3 && <div className="flex-1 h-0.5 bg-gray-300 mx-2"></div>}
+                                    </React.Fragment>
+                                );
+                            })
+                        ) : (
+                            // Timeline per lavori 3D (4 step)
+                            [1, 2, 3, 4].map(stepNum => {
+                                const isCompleted = steps[`step${stepNum}`];
+                                const labels = ['', 'Inviata', 'CAD', 'Stampa', 'Consegna'];
+                                const stepColor = getStepColor(lavoro, stepNum);
+                                
+                                return (
+                                    <React.Fragment key={stepNum}>
+                                        <div className="flex flex-col items-center">
+                                            <div 
+                                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm timeline-step ${stepColor}`}
+                                                title={`${labels[stepNum]} - ${isCompleted ? 'Completato' : 'In attesa'}`}
+                                            >
+                                                {isCompleted || (stepNum === 3 && lavoro.StatoStampa === 'IN_CORSO') ? 
+                                                    <i className="fas fa-check"></i> : stepNum}
+                                            </div>
+                                            <div className="text-xs mt-1 text-center max-w-16">
+                                                <div className="font-medium text-gray-700 leading-tight">
+                                                    {labels[stepNum]}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))
+                                        {stepNum < 4 && <div className="flex-1 h-0.5 bg-gray-300 mx-2"></div>}
+                                    </React.Fragment>
+                                );
+                            })
+                        )}
+                    </div>
+
+                    {/* Footer con select stati (per ora solo visivi) */}
+                    <div className="flex justify-between items-center">
+                        <div className="flex space-x-2">
+                            {lavoro.TipoLavoro === '3D' ? (
+                                <>
+                                    <select 
+                                        value={lavoro.StatoCAD}
+                                        className="text-xs border rounded px-2 py-1"
+                                        disabled
+                                    >
+                                        <option value="ATTESA">CAD: Attesa</option>
+                                        <option value="RICEVUTO">CAD: Ricevuto</option>
+                                        <option value="MANCANTE">CAD: Mancante</option>
+                                    </select>
+                                    
+                                    <select 
+                                        value={lavoro.StatoStampa}
+                                        className="text-xs border rounded px-2 py-1"
+                                        disabled
+                                    >
+                                        <option value="NON_INIZIATA">Stampa: Non iniziata</option>
+                                        <option value="IN_CORSO">Stampa: In corso</option>
+                                        <option value="COMPLETATA">Stampa: Completata</option>
+                                        <option value="CONSEGNATA">🏁 Consegnata (Archivia)</option>
+                                    </select>
+                                </>
+                            ) : (
+                                <>
+                                    <select 
+                                        value={lavoro.StatoCAD}
+                                        className="text-xs border rounded px-2 py-1"
+                                        disabled
+                                    >
+                                        <option value="ATTESA">Lavoro: In attesa</option>
+                                        <option value="RICEVUTO">Lavoro: Arrivato</option>
+                                    </select>
+                                    
+                                    <select 
+                                        value={lavoro.StatoStampa}
+                                        className="text-xs border rounded px-2 py-1"
+                                        disabled
+                                    >
+                                        <option value="NON_INIZIATA">Non consegnato</option>
+                                        <option value="CONSEGNATA">🏁 Consegnato (Archivia)</option>
+                                    </select>
+                                </>
                             )}
                         </div>
+                        
+                        {lavoro.TipoLavoro === '3D' && (
+                            <button 
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
+                                disabled
+                            >
+                                <i className="fas fa-edit mr-1"></i>
+                                Dettagli
+                            </button>
+                        )}
+                    </div>
+                </div>
+            );
+        }
                     </div>
                 </div>
             );

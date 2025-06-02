@@ -410,55 +410,54 @@
                             </div>
                         </div>
                         <div className="flex space-x-2">
-                            {/* Badge CAD solo per lavori 3D */}
-                            {lavoro.TipoLavoro === '3D' && (
-                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                    lavoro.StatoCAD === 'RICEVUTO' ? 'bg-green-100 text-green-800' :
-                                    lavoro.StatoCAD === 'ATTESA' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-red-100 text-red-800'
-                                }`}>
-                                    CAD: {lavoro.StatoCAD}
-                                </span>
-                            )}
-                            
-                            {/* Badge Stampa solo per lavori 3D */}
-                            {lavoro.TipoLavoro === '3D' && (
-                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                    lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA' ? 'bg-green-100 text-green-800' :
-                                    lavoro.StatoStampa === 'IN_CORSO' ? 'bg-blue-100 text-blue-800' :
-                                    'bg-gray-100 text-gray-800'
-                                }`}>
-                                    Stampa: {lavoro.StatoStampa}
-                                </span>
-                            )}
-                            
-                            {/* Badge Spedizione solo per lavori TRADIZIONALI */}
-                            {lavoro.TipoLavoro === 'TRADIZIONALE' && (
-                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                    lavoro.StatoSpedizione === 'SPEDITO' ? 'bg-green-100 text-green-800' :
-                                    'bg-yellow-100 text-yellow-800'
-                                }`}>
-                                    {lavoro.StatoSpedizione === 'SPEDITO' ? '🚚 Spedito' : '📦 Da spedire'}
-                                </span>
-                            )}
-                            
-                            {/* ✅ Badge Lavoro per TRADIZIONALI */}
-                            {lavoro.TipoLavoro === 'TRADIZIONALE' && (
-                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                    lavoro.StatoCAD === 'RICEVUTO' ? 'bg-green-100 text-green-800' :
-                                    'bg-yellow-100 text-yellow-800'
-                                }`}>
-                                    {lavoro.StatoCAD === 'RICEVUTO' ? '✅ Arrivato' : '🚛 In arrivo'}
-                                </span>
-                            )}
-                            
-                            {/* Badge Ricezione per tutti i lavori */}
+                            {/* ✅ Badge Ricezione SEMPRE per primo */}
                             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                                 lavoro.StatoRicezione === 'RICEVUTA' ? 'bg-green-100 text-green-800' :
                                 'bg-gray-100 text-gray-800'
                             }`}>
                                 {lavoro.StatoRicezione === 'RICEVUTA' ? '✅ Ricevuta' : '📥 In attesa'}
                             </span>
+                            
+                            {/* Badge specifici per tipo lavoro */}
+                            {lavoro.TipoLavoro === '3D' ? (
+                                <>
+                                    {/* Badge CAD solo per lavori 3D */}
+                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                        lavoro.StatoCAD === 'RICEVUTO' ? 'bg-green-100 text-green-800' :
+                                        lavoro.StatoCAD === 'ATTESA' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-red-100 text-red-800'
+                                    }`}>
+                                        CAD: {lavoro.StatoCAD}
+                                    </span>
+                                    
+                                    {/* Badge Stampa solo per lavori 3D */}
+                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                        lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA' ? 'bg-green-100 text-green-800' :
+                                        lavoro.StatoStampa === 'IN_CORSO' ? 'bg-blue-100 text-blue-800' :
+                                        'bg-gray-100 text-gray-800'
+                                    }`}>
+                                        Stampa: {lavoro.StatoStampa}
+                                    </span>
+                                </>
+                            ) : (
+                                <>
+                                    {/* Badge Spedizione per TRADIZIONALI */}
+                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                        lavoro.StatoSpedizione === 'SPEDITO' ? 'bg-green-100 text-green-800' :
+                                        'bg-yellow-100 text-yellow-800'
+                                    }`}>
+                                        {lavoro.StatoSpedizione === 'SPEDITO' ? '🚚 Spedito' : '📦 Da spedire'}
+                                    </span>
+                                    
+                                    {/* Badge Lavoro per TRADIZIONALI */}
+                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                        lavoro.StatoCAD === 'RICEVUTO' ? 'bg-green-100 text-green-800' :
+                                        'bg-yellow-100 text-yellow-800'
+                                    }`}>
+                                        {lavoro.StatoCAD === 'RICEVUTO' ? '✅ Arrivato' : '🚛 In arrivo'}
+                                    </span>
+                                </>
+                            )}
                         </div>
                     </div>
 

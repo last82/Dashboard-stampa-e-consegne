@@ -358,7 +358,31 @@
                     <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center space-x-3">
                             <div>
-                                <h3 className="text-lg font-bold text-gray-900">{lavoro.CodicePaziente}</h3>
+                                <div className="flex items-center space-x-2">
+                                    <h3 className="text-lg font-bold text-gray-900">{lavoro.CodicePaziente}</h3>
+                                    {/* ✅ Bottone Note Prescrizione */}
+                                    {lavoro.NotePrescrizione && (
+                                        <button 
+                                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs"
+                                            onClick={() => {
+                                                const modalContent = `
+                                                    📋 DETTAGLI PRESCRIZIONE - ${lavoro.CodicePaziente}
+                                                    
+                                                    🏭 Laboratorio: ${lavoro.Laboratorio}
+                                                    📅 Data Consegna: ${lavoro.DataConsegna ? new Date(lavoro.DataConsegna).toLocaleDateString('it-IT') : 'Non definita'}
+                                                    🔧 Tipo Lavoro: ${lavoro.TipoLavoro}
+                                                    
+                                                    📝 DETTAGLI:
+                                                    ${lavoro.NotePrescrizione}
+                                                `;
+                                                alert(modalContent);
+                                            }}
+                                            title="Visualizza dettagli prescrizione"
+                                        >
+                                            <i className="fas fa-file-text"></i>
+                                        </button>
+                                    )}
+                                </div>
                                 <div className="flex items-center space-x-3 text-sm text-gray-600">
                                     <span>🏭 {lavoro.Laboratorio}</span>
                                     <span className={`px-2 py-1 rounded text-xs font-semibold ${
@@ -414,14 +438,22 @@
                                     {lavoro.StatoSpedizione === 'SPEDITO' ? '🚚 Spedito' : '📦 Da spedire'}
                                 </span>
                             )}
+                            
+                            {/* ✅ Badge Ricezione per tutti i lavori */}
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                lavoro.StatoRicezione === 'RICEVUTA' ? 'bg-green-100 text-green-800' :
+                                'bg-gray-100 text-gray-800'
+                            }`}>
+                                {lavoro.StatoRicezione === 'RICEVUTA' ? '✅ Ricevuta' : '📥 In attesa'}
+                            </span>
                         </div>
                     </div>
 
                     <div className="flex justify-between items-center mb-3">
                         {lavoro.TipoLavoro === 'TRADIZIONALE' ? (
-                            [1, 2, 3, 4].map(stepNum => {
+                            [1, 2, 3, 4, 5].map(stepNum => {
                                 const isCompleted = steps[`step${stepNum}`];
-                                const labels = ['', 'Inviata', 'Spedita', 'Arrivata', 'Consegna'];
+                                const labels = ['', 'Inviata', 'Ricevuta', 'Spedita', 'Arrivata', 'Consegna'];
                                 const stepColor = getStepColor(lavoro, stepNum);
                                 
                                 return (
@@ -441,14 +473,14 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        {stepNum < 4 && <div className="flex-1 h-0.5 bg-gray-300 mx-2"></div>}
+                                        {stepNum < 5 && <div className="flex-1 h-0.5 bg-gray-300 mx-2"></div>}
                                     </React.Fragment>
                                 );
                             })
                         ) : (
-                            [1, 2, 3, 4].map(stepNum => {
+                            [1, 2, 3, 4, 5].map(stepNum => {
                                 const isCompleted = steps[`step${stepNum}`];
-                                const labels = ['', 'Inviata', 'CAD', 'Stampa', 'Consegna'];
+                                const labels = ['', 'Inviata', 'Ricevuta', 'CAD', 'Stampa', 'Consegna'];
                                 const stepColor = getStepColor(lavoro, stepNum);
                                 
                                 // ✅ Date timeline per lavori 3D (ora 5 step)
@@ -523,6 +555,15 @@
                                 </>
                             ) : (
                                 <>
+                                    <select 
+                                        value={lavoro.StatoRicezione}
+                                        onChange={(e) => onUpdateStatus(lavoro.id, 'StatoRicezione', e.target.value)}
+                                        className="text-xs border rounded px-2 py-1"
+                                    >
+                                        <option value="NON_RICEVUTA">📥 Non ricevuta</option>
+                                        <option value="RICEVUTA">✅ Ricevuta in LAB</option>
+                                    </select>
+                                    
                                     <select 
                                         value={lavoro.StatoSpedizione}
                                         onChange={(e) => onUpdateStatus(lavoro.id, 'StatoSpedizione', e.target.value)}
@@ -686,9 +727,15 @@
                     if (tipoLavoro === '3D') {
                         switch(stepNumber) {
                             case 2:
-                                updateFields.StatoCAD = lavoro.StatoCAD === 'RICEVUTO' ? 'ATTESA' : 'RICEVUTO';
+                                // Step 2: Ricezione in LAB  
+                                updateFields.StatoRicezione = lavoro.StatoRicezione === 'RICEVUTA' ? 'NON_RICEVUTA' : 'RICEVUTA';
                                 break;
                             case 3:
+                                // Step 3: CAD
+                                updateFields.StatoCAD = lavoro.StatoCAD === 'RICEVUTO' ? 'ATTESA' : 'RICEVUTO';
+                                break;
+                            case 4:
+                                // Step 4: Stampa
                                 if (lavoro.StatoStampa === 'NON_INIZIATA') {
                                     updateFields.StatoStampa = 'IN_CORSO';
                                 } else if (lavoro.StatoStampa === 'IN_CORSO') {
@@ -699,23 +746,28 @@
                                     updateFields.StatoStampa = 'IN_CORSO';
                                 }
                                 break;
-                            case 4:
+                            case 5:
+                                // Step 5: Consegna
                                 updateFields.StatoStampa = lavoro.StatoStampa === 'CONSEGNATA' ? 'COMPLETATA' : 'CONSEGNATA';
                                 break;
                         }
                     } else {
-                        // Lavoro TRADIZIONALE - ora con 4 step
+                        // Lavoro TRADIZIONALE - ora con 5 step
                         switch(stepNumber) {
                             case 2:
-                                // Step 2: Spedizione
-                                updateFields.StatoSpedizione = lavoro.StatoSpedizione === 'SPEDITO' ? 'NON_SPEDITO' : 'SPEDITO';
+                                // Step 2: Ricezione in LAB
+                                updateFields.StatoRicezione = lavoro.StatoRicezione === 'RICEVUTA' ? 'NON_RICEVUTA' : 'RICEVUTA';
                                 break;
                             case 3:
-                                // Step 3: Arrivato (CAD)
-                                updateFields.StatoCAD = lavoro.StatoCAD === 'RICEVUTO' ? 'ATTESA' : 'RICEVUTO';
+                                // Step 3: Spedizione
+                                updateFields.StatoSpedizione = lavoro.StatoSpedizione === 'SPEDITO' ? 'NON_SPEDITO' : 'SPEDITO';
                                 break;
                             case 4:
-                                // Step 4: Consegna
+                                // Step 4: Arrivato (CAD)
+                                updateFields.StatoCAD = lavoro.StatoCAD === 'RICEVUTO' ? 'ATTESA' : 'RICEVUTO';
+                                break;
+                            case 5:
+                                // Step 5: Consegna
                                 updateFields.StatoStampa = lavoro.StatoStampa === 'CONSEGNATA' ? 'NON_INIZIATA' : 'CONSEGNATA';
                                 break;
                         }

@@ -364,29 +364,47 @@
             };
 
             // Gestione click vs long press
-            const handleMouseDown = (lavoro) => {
+            const handleMouseDown = (lavoro, e) => {
+                e.preventDefault(); // Previene selezione testo
+                
                 const timer = setTimeout(() => {
                     console.log('🖱️ Long press detected - enabling drag');
                     setIsDraggable(true);
+                    setSelectedLavoro(lavoro); // Set per il drag
                 }, 500); // 500ms per long press
                 
                 setLongPressTimer(timer);
+                setSelectedLavoro(lavoro); // Set per il click
             };
 
-            const handleMouseUp = () => {
+            const handleMouseUp = (lavoro, e) => {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    setLongPressTimer(null);
+                    
+                    // Se non è diventato draggable, è un click normale
+                    if (!isDraggable) {
+                        console.log('🖱️ Click detected - opening date picker');
+                        setSelectedLavoro(lavoro);
+                        setShowDatePicker(true);
+                    }
+                }
+                
+                // Reset drag state
+                setTimeout(() => {
+                    setIsDraggable(false);
+                }, 100);
+            };
+
+            const handleMouseLeave = () => {
                 if (longPressTimer) {
                     clearTimeout(longPressTimer);
                     setLongPressTimer(null);
                 }
-            };
-
-            const handleClick = (lavoro) => {
-                // Solo se non era un long press (draggable)
-                if (!isDraggable) {
-                    console.log('🖱️ Click detected - opening date picker');
-                    setSelectedLavoro(lavoro);
-                    setShowDatePicker(true);
-                }
+                // Reset drag state dopo un delay
+                setTimeout(() => {
+                    setIsDraggable(false);
+                }, 100);
             };
 
             const handleDatePickerSave = async (newDate) => {
@@ -485,10 +503,9 @@
                                             <div 
                                                 key={lavoro.id}
                                                 draggable={isDraggable}
-                                                onMouseDown={() => handleMouseDown(lavoro)}
-                                                onMouseUp={handleMouseUp}
-                                                onMouseLeave={handleMouseUp}
-                                                onClick={() => handleClick(lavoro)}
+                                                onMouseDown={(e) => handleMouseDown(lavoro, e)}
+                                                onMouseUp={(e) => handleMouseUp(lavoro, e)}
+                                                onMouseLeave={handleMouseLeave}
                                                 onDragStart={() => handleDragStart(lavoro)}
                                                 onDragEnd={handleDragEnd}
                                                 className={`delivery-badge px-2 py-1 rounded text-xs font-semibold text-center select-none ${getBadgeColor(lavoro)} hover:opacity-80 transition-all duration-200 ${

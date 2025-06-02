@@ -193,7 +193,33 @@
                 }
 
                 // Cleanup solo al unmount del componente
-                return () => {
+                // Ordinamento lavori per data di consegna
+            const lavoriOrdinati = useMemo(() => {
+                const oggi = new Date();
+                oggi.setHours(0, 0, 0, 0); // Reset ore per confronto corretto
+                
+                return [...lavori].sort((a, b) => {
+                    // Lavori senza data vanno in fondo
+                    if (!a.DataConsegna && !b.DataConsegna) return 0;
+                    if (!a.DataConsegna) return 1;
+                    if (!b.DataConsegna) return -1;
+                    
+                    const dataA = new Date(a.DataConsegna);
+                    const dataB = new Date(b.DataConsegna);
+                    
+                    // Prima i lavori in scadenza (passati o oggi)
+                    const scadutoA = dataA <= oggi;
+                    const scadutoB = dataB <= oggi;
+                    
+                    if (scadutoA && !scadutoB) return -1;
+                    if (!scadutoA && scadutoB) return 1;
+                    
+                    // Poi ordina per data crescente (più vicini in alto)
+                    return dataA - dataB;
+                });
+            }, [lavori]);
+
+            return () => {
                     if (calendar && calendarInitialized) {
                         console.log('🗑️ Distruzione calendario...');
                         calendar.destroy();

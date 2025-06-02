@@ -215,6 +215,26 @@
                 }
             };
 
+            // AGGIUNTO: Event listener globale per catturare dragend su tutto il documento
+            useEffect(() => {
+                const handleGlobalDragEnd = () => {
+                    if (isDragging) {
+                        console.log('🏁 Drag terminato globalmente - Reset calendario');
+                        setDraggedItem(null);
+                        setDropTarget(null);
+                        setIsDragging(false);
+                    }
+                };
+
+                // Ascolta dragend su tutto il documento
+                document.addEventListener('dragend', handleGlobalDragEnd);
+                
+                // Cleanup
+                return () => {
+                    document.removeEventListener('dragend', handleGlobalDragEnd);
+                };
+            }, [isDragging]);
+
             const goToToday = () => {
                 setCurrentDate(new Date());
             };
@@ -280,7 +300,9 @@
                         `Questa è una data passata.`
                     );
                     if (!confirm) {
+                        // IMPORTANTE: Reset drag state anche se annullato
                         setDraggedItem(null);
+                        setIsDragging(false);
                         return;
                     }
                 }
@@ -291,7 +313,9 @@
                     alert('Errore nell\'aggiornamento della data. Riprova.');
                 }
                 
+                // IMPORTANTE: Reset completo drag state
                 setDraggedItem(null);
+                setIsDragging(false);
             };
 
             const monthNames = [

@@ -272,9 +272,10 @@
             function getSteps(lavoro) {
                 if (lavoro.TipoLavoro === 'TRADIZIONALE') {
                     return {
-                        step1: true,
-                        step2: lavoro.StatoCAD === 'RICEVUTO',
-                        step3: lavoro.StatoStampa === 'CONSEGNATA'
+                        step1: true, // Sempre inviata
+                        step2: lavoro.StatoSpedizione === 'SPEDITO', // Spedita
+                        step3: lavoro.StatoCAD === 'RICEVUTO', // Arrivata
+                        step4: lavoro.StatoStampa === 'CONSEGNATA' // Consegna
                     };
                 } else {
                     return {
@@ -362,9 +363,9 @@
 
                     <div className="flex justify-between items-center mb-3">
                         {lavoro.TipoLavoro === 'TRADIZIONALE' ? (
-                            [1, 2, 3].map(stepNum => {
+                            [1, 2, 3, 4].map(stepNum => {
                                 const isCompleted = steps[`step${stepNum}`];
-                                const labels = ['', 'Inviata', 'Arrivata', 'Consegna'];
+                                const labels = ['', 'Inviata', 'Spedita', 'Arrivata', 'Consegna'];
                                 const stepColor = getStepColor(lavoro, stepNum);
                                 
                                 return (
@@ -384,7 +385,7 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        {stepNum < 3 && <div className="flex-1 h-0.5 bg-gray-300 mx-2"></div>}
+                                        {stepNum < 4 && <div className="flex-1 h-0.5 bg-gray-300 mx-2"></div>}
                                     </React.Fragment>
                                 );
                             })
@@ -446,6 +447,15 @@
                                 </>
                             ) : (
                                 <>
+                                    <select 
+                                        value={lavoro.StatoSpedizione}
+                                        onChange={(e) => onUpdateStatus(lavoro.id, 'StatoSpedizione', e.target.value)}
+                                        className="text-xs border rounded px-2 py-1"
+                                    >
+                                        <option value="NON_SPEDITO">📦 Non spedito</option>
+                                        <option value="SPEDITO">🚚 Spedito</option>
+                                    </select>
+                                    
                                     <select 
                                         value={lavoro.StatoCAD}
                                         onChange={(e) => onUpdateStatus(lavoro.id, 'StatoCAD', e.target.value)}
@@ -521,6 +531,7 @@
                             TipoLavoro: prescrizione.TipoLavoro || '3D',
                             StatoCAD: record.fields.StatoCAD || 'ATTESA',
                             StatoStampa: record.fields.StatoStampa || 'NON_INIZIATA',
+                            StatoSpedizione: record.fields.StatoSpedizione || 'NON_SPEDITO', // Nuovo campo
                             Archiviato: record.fields.Archiviato || false
                         };
                     });
@@ -591,11 +602,18 @@
                                 break;
                         }
                     } else {
+                        // Lavoro TRADIZIONALE - ora con 4 step
                         switch(stepNumber) {
                             case 2:
-                                updateFields.StatoCAD = lavoro.StatoCAD === 'RICEVUTO' ? 'ATTESA' : 'RICEVUTO';
+                                // Step 2: Spedizione
+                                updateFields.StatoSpedizione = lavoro.StatoSpedizione === 'SPEDITO' ? 'NON_SPEDITO' : 'SPEDITO';
                                 break;
                             case 3:
+                                // Step 3: Arrivato (CAD)
+                                updateFields.StatoCAD = lavoro.StatoCAD === 'RICEVUTO' ? 'ATTESA' : 'RICEVUTO';
+                                break;
+                            case 4:
+                                // Step 4: Consegna
                                 updateFields.StatoStampa = lavoro.StatoStampa === 'CONSEGNATA' ? 'NON_INIZIATA' : 'CONSEGNATA';
                                 break;
                         }
@@ -878,7 +896,6 @@
                                         </div>
                                     );
                                 })
-                            )}
                             )}
                         </div>
                     </div>

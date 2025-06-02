@@ -312,38 +312,6 @@
                         </div>
                     </div>
 
-                    {/* Input Data per Spostamenti Precisi */}
-                    {draggedItem && (
-                        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                            <div className="flex items-center space-x-3">
-                                <span className="text-sm font-medium text-yellow-800">
-                                    📋 Sposta {draggedItem.CodicePaziente} a data specifica:
-                                </span>
-                                <input
-                                    type="date"
-                                    className="border rounded px-2 py-1 text-sm"
-                                    onChange={async (e) => {
-                                        if (e.target.value) {
-                                            try {
-                                                await onUpdateDataConsegna(draggedItem.id, e.target.value);
-                                                setDraggedItem(null);
-                                            } catch (error) {
-                                                alert('Errore nell\'aggiornamento della data. Riprova.');
-                                            }
-                                        }
-                                    }}
-                                />
-                                <button
-                                    onClick={() => setDraggedItem(null)}
-                                    className="text-yellow-600 hover:text-yellow-800"
-                                    title="Annulla"
-                                >
-                                    <i className="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
                     <div className="grid grid-cols-7 gap-2 mb-2">
                         {dayNames.map(day => (
                             <div key={day} className="text-center text-sm font-medium text-gray-600 py-2">

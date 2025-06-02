@@ -193,33 +193,7 @@
                 }
 
                 // Cleanup solo al unmount del componente
-                // Ordinamento lavori per data di consegna
-            const lavoriOrdinati = useMemo(() => {
-                const oggi = new Date();
-                oggi.setHours(0, 0, 0, 0); // Reset ore per confronto corretto
-                
-                return [...lavori].sort((a, b) => {
-                    // Lavori senza data vanno in fondo
-                    if (!a.DataConsegna && !b.DataConsegna) return 0;
-                    if (!a.DataConsegna) return 1;
-                    if (!b.DataConsegna) return -1;
-                    
-                    const dataA = new Date(a.DataConsegna);
-                    const dataB = new Date(b.DataConsegna);
-                    
-                    // Prima i lavori in scadenza (passati o oggi)
-                    const scadutoA = dataA <= oggi;
-                    const scadutoB = dataB <= oggi;
-                    
-                    if (scadutoA && !scadutoB) return -1;
-                    if (!scadutoA && scadutoB) return 1;
-                    
-                    // Poi ordina per data crescente (più vicini in alto)
-                    return dataA - dataB;
-                });
-            }, [lavori]);
-
-            return () => {
+                return () => {
                     if (calendar && calendarInitialized) {
                         console.log('🗑️ Distruzione calendario...');
                         calendar.destroy();
@@ -563,6 +537,32 @@
                 loadData();
             }, [loadData]);
 
+            // Ordinamento lavori per data di consegna
+            const lavoriOrdinati = useMemo(() => {
+                const oggi = new Date();
+                oggi.setHours(0, 0, 0, 0); // Reset ore per confronto corretto
+                
+                return [...lavori].sort((a, b) => {
+                    // Lavori senza data vanno in fondo
+                    if (!a.DataConsegna && !b.DataConsegna) return 0;
+                    if (!a.DataConsegna) return 1;
+                    if (!b.DataConsegna) return -1;
+                    
+                    const dataA = new Date(a.DataConsegna);
+                    const dataB = new Date(b.DataConsegna);
+                    
+                    // Prima i lavori in scadenza (passati o oggi)
+                    const scadutoA = dataA <= oggi;
+                    const scadutoB = dataB <= oggi;
+                    
+                    if (scadutoA && !scadutoB) return -1;
+                    if (!scadutoA && scadutoB) return 1;
+                    
+                    // Poi ordina per data crescente (più vicini in alto)
+                    return dataA - dataB;
+                });
+            }, [lavori]);
+
             const toggleStep = useCallback(async (id, stepNumber, tipoLavoro) => {
                 try {
                     const lavoro = lavoriRef.current.find(l => l.id === id);
@@ -826,6 +826,9 @@
                         <div className="bg-white rounded-lg shadow-sm p-3 mb-4">
                             <div className="flex gap-4 items-center">
                                 <h3 className="text-lg font-bold text-gray-900">📋 Lista Lavori con Timeline</h3>
+                                <span className="text-sm text-gray-600">
+                                    📅 Ordinati per data di consegna (più urgenti in alto)
+                                </span>
                                 <button 
                                     onClick={loadData}
                                     disabled={loading}
@@ -838,20 +841,44 @@
                         </div>
 
                         <div className="space-y-3">
-                            {lavori.length === 0 ? (
+                            {lavoriOrdinati.length === 0 ? (
                                 <div className="bg-white rounded-lg shadow-sm p-6 text-center">
                                     <i className="fas fa-search text-gray-400 text-3xl mb-3"></i>
                                     <p className="text-gray-600">Nessun lavoro trovato</p>
                                 </div>
                             ) : (
-                                lavori.map(lavoro => (
-                                    <CardLavoro 
-                                        key={lavoro.id} 
-                                        lavoro={lavoro} 
-                                        onToggleStep={toggleStep}
-                                        onUpdateStatus={updateStatus}
-                                    />
-                                ))
+                                lavoriOrdinati.map((lavoro, index) => {
+                                    const oggi = new Date();
+                                    oggi.setHours(0, 0, 0, 0);
+                                    const dataConsegna = lavoro.DataConsegna ? new Date(lavoro.DataConsegna) : null;
+                                    const isUrgente = dataConsegna && dataConsegna <= oggi;
+                                    const giorniMancanti = dataConsegna ? Math.ceil((dataConsegna - oggi) / (1000 * 60 * 60 * 24)) : null;
+                                    
+                                    return (
+                                        <div key={lavoro.id} className="relative">
+                                            {/* Badge posizione per debug e info */}
+                                            <div className="absolute -left-2 top-2 z-10">
+                                                <span className={`inline-flex items-center justify-center w-6 h-6 text-xs font-bold rounded-full ${
+                                                    isUrgente ? 'bg-red-500 text-white' :
+                                                    giorniMancanti <= 3 ? 'bg-orange-500 text-white' :
+                                                    'bg-blue-500 text-white'
+                                                }`}>
+                                                    {index + 1}
+                                                </span>
+                                            </div>
+                                            
+                                            {/* Card del lavoro */}
+                                            <div className={`ml-4 ${isUrgente ? 'ring-2 ring-red-500' : ''}`}>
+                                                <CardLavoro 
+                                                    lavoro={lavoro} 
+                                                    onToggleStep={toggleStep}
+                                                    onUpdateStatus={updateStatus}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
                             )}
                         </div>
                     </div>

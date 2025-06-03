@@ -101,6 +101,82 @@
             .dashboard-subtitle {
                 font-size: 0.75rem !important;
             }
+            
+            /* ✅ STEP 2: Badge e dropdown responsive */
+            .mobile-badges {
+                flex-wrap: wrap !important;
+                gap: 0.25rem !important;
+            }
+            
+            .mobile-badge {
+                font-size: 0.625rem !important;
+                padding: 0.125rem 0.375rem !important;
+            }
+            
+            .mobile-controls {
+                flex-wrap: wrap !important;
+                gap: 0.25rem !important;
+            }
+            
+            .mobile-dropdown {
+                font-size: 0.625rem !important;
+                padding: 0.25rem 0.375rem !important;
+                min-width: auto !important;
+            }
+            
+            /* Card content più compatto */
+            .mobile-card-content {
+                padding: 0.75rem !important;
+            }
+            
+            .mobile-card-header {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 0.5rem !important;
+            }
+            
+            .mobile-work-info {
+                flex-wrap: wrap !important;
+                gap: 0.25rem !important;
+            }
+            
+            /* Timeline più compatta */
+            .mobile-timeline {
+                margin: 0.5rem 0 !important;
+            }
+            
+            .mobile-timeline-step {
+                width: 2rem !important;
+                height: 2rem !important;
+                font-size: 0.75rem !important;
+            }
+            
+            .mobile-timeline-label {
+                font-size: 0.625rem !important;
+                max-width: 2.5rem !important;
+            }
+            
+            /* Statistiche più compatte */
+            .mobile-stats {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 0.5rem !important;
+            }
+            
+            .mobile-stat-card {
+                padding: 0.5rem !important;
+            }
+            
+            .mobile-stat-icon {
+                padding: 0.25rem !important;
+            }
+            
+            .mobile-stat-text {
+                font-size: 0.625rem !important;
+            }
+            
+            .mobile-stat-number {
+                font-size: 1.25rem !important;
+            }
         }
     </style>
 </head>
@@ -394,9 +470,9 @@
             const daysUntil = getDaysUntilDelivery(lavoro.DataConsegna);
 
             return (
-                <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500 card-hover">
-                    <div className="flex justify-between items-start mb-3">
-                        <div className="flex items-center space-x-3">
+                <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500 card-hover mobile-card-content">
+                    <div className="flex justify-between items-start mb-3 mobile-card-header">
+                        <div className="flex items-center space-x-3 mobile-work-info">
                             <div>
                                 <div className="flex items-center space-x-2">
                                     <h3 className="text-lg font-bold text-gray-900">{lavoro.CodicePaziente}</h3>
@@ -423,7 +499,7 @@
                                         </button>
                                     )}
                                 </div>
-                                <div className="flex items-center space-x-3 text-sm text-gray-600">
+                                <div className="flex items-center space-x-3 text-sm text-gray-600 mobile-work-info">
                                     <span>🏭 {lavoro.Laboratorio}</span>
                                     <span className={`px-2 py-1 rounded text-xs font-semibold ${
                                         lavoro.TipoLavoro === '3D' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
@@ -449,9 +525,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div className="flex space-x-2">
+                        <div className="flex space-x-2 mobile-badges">
                             {/* ✅ Badge Ricezione SEMPRE per primo */}
-                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold mobile-badge ${
                                 lavoro.StatoRicezione === 'RICEVUTA' ? 'bg-green-100 text-green-800' :
                                 'bg-gray-100 text-gray-800'
                             }`}>
@@ -462,7 +538,7 @@
                             {lavoro.TipoLavoro === '3D' ? (
                                 <>
                                     {/* Badge CAD solo per lavori 3D */}
-                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold mobile-badge ${
                                         lavoro.StatoCAD === 'RICEVUTO' ? 'bg-green-100 text-green-800' :
                                         lavoro.StatoCAD === 'ATTESA' ? 'bg-yellow-100 text-yellow-800' :
                                         'bg-red-100 text-red-800'
@@ -471,7 +547,7 @@
                                     </span>
                                     
                                     {/* Badge Stampa solo per lavori 3D */}
-                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold mobile-badge ${
                                         lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA' ? 'bg-green-100 text-green-800' :
                                         lavoro.StatoStampa === 'IN_CORSO' ? 'bg-blue-100 text-blue-800' :
                                         'bg-gray-100 text-gray-800'
@@ -482,7 +558,7 @@
                             ) : (
                                 <>
                                     {/* Badge Spedizione per TRADIZIONALI */}
-                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold mobile-badge ${
                                         lavoro.StatoSpedizione === 'SPEDITO' ? 'bg-green-100 text-green-800' :
                                         'bg-yellow-100 text-yellow-800'
                                     }`}>
@@ -490,7 +566,7 @@
                                     </span>
                                     
                                     {/* Badge Lavoro per TRADIZIONALI */}
-                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold mobile-badge ${
                                         lavoro.StatoCAD === 'RICEVUTO' ? 'bg-green-100 text-green-800' :
                                         'bg-yellow-100 text-yellow-800'
                                     }`}>
@@ -501,7 +577,7 @@
                         </div>
                     </div>
 
-                    <div className="flex justify-between items-center mb-3">
+                    <div className="flex justify-between items-center mb-3 mobile-timeline">
                         {lavoro.TipoLavoro === 'TRADIZIONALE' ? (
                             [1, 2, 3, 4, 5].map(stepNum => {
                                 const isCompleted = steps[`step${stepNum}`];
@@ -512,14 +588,14 @@
                                     <React.Fragment key={stepNum}>
                                         <div className="flex flex-col items-center">
                                             <div 
-                                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm timeline-step ${stepColor}`}
+                                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm timeline-step mobile-timeline-step ${stepColor}`}
                                                 onClick={() => stepNum > 1 && onToggleStep(lavoro.id, stepNum, lavoro.TipoLavoro)}
                                                 title={`Click per ${isCompleted ? 'annullare' : 'completare'}: ${labels[stepNum]}`}
                                                 style={{ cursor: stepNum > 1 ? 'pointer' : 'default' }}
                                             >
                                                 {isCompleted ? <i className="fas fa-check"></i> : stepNum}
                                             </div>
-                                            <div className="text-xs mt-1 text-center max-w-16">
+                                            <div className="text-xs mt-1 text-center max-w-16 mobile-timeline-label">
                                                 <div className="font-medium text-gray-700 leading-tight">
                                                     {labels[stepNum]}
                                                 </div>
@@ -586,13 +662,13 @@
                     </div>
 
                     <div className="flex justify-between items-center">
-                        <div className="flex space-x-2">
+                        <div className="flex space-x-2 mobile-controls">
                             {lavoro.TipoLavoro === '3D' ? (
                                 <>
                                     <select 
                                         value={lavoro.StatoRicezione}
                                         onChange={(e) => onUpdateStatus(lavoro.id, 'StatoRicezione', e.target.value)}
-                                        className="text-xs border rounded px-2 py-1"
+                                        className="text-xs border rounded px-2 py-1 mobile-dropdown"
                                     >
                                         <option value="NON_RICEVUTA">📥 Non ricevuta</option>
                                         <option value="RICEVUTA">✅ Ricevuta in LAB</option>
@@ -601,7 +677,7 @@
                                     <select 
                                         value={lavoro.StatoCAD}
                                         onChange={(e) => onUpdateStatus(lavoro.id, 'StatoCAD', e.target.value)}
-                                        className="text-xs border rounded px-2 py-1"
+                                        className="text-xs border rounded px-2 py-1 mobile-dropdown"
                                     >
                                         <option value="ATTESA">CAD: Attesa</option>
                                         <option value="RICEVUTO">CAD: Ricevuto</option>
@@ -611,7 +687,7 @@
                                     <select 
                                         value={lavoro.StatoStampa}
                                         onChange={(e) => onUpdateStatus(lavoro.id, 'StatoStampa', e.target.value)}
-                                        className="text-xs border rounded px-2 py-1"
+                                        className="text-xs border rounded px-2 py-1 mobile-dropdown"
                                     >
                                         <option value="NON_INIZIATA">Stampa: Non iniziata</option>
                                         <option value="IN_CORSO">Stampa: In corso</option>
@@ -624,7 +700,7 @@
                                     <select 
                                         value={lavoro.StatoRicezione}
                                         onChange={(e) => onUpdateStatus(lavoro.id, 'StatoRicezione', e.target.value)}
-                                        className="text-xs border rounded px-2 py-1"
+                                        className="text-xs border rounded px-2 py-1 mobile-dropdown"
                                     >
                                         <option value="NON_RICEVUTA">📥 Non ricevuta</option>
                                         <option value="RICEVUTA">✅ Ricevuta in LAB</option>
@@ -633,7 +709,7 @@
                                     <select 
                                         value={lavoro.StatoSpedizione}
                                         onChange={(e) => onUpdateStatus(lavoro.id, 'StatoSpedizione', e.target.value)}
-                                        className="text-xs border rounded px-2 py-1"
+                                        className="text-xs border rounded px-2 py-1 mobile-dropdown"
                                     >
                                         <option value="NON_SPEDITO">📦 Non spedito</option>
                                         <option value="SPEDITO">🚚 Spedito</option>
@@ -642,7 +718,7 @@
                                     <select 
                                         value={lavoro.StatoCAD}
                                         onChange={(e) => onUpdateStatus(lavoro.id, 'StatoCAD', e.target.value)}
-                                        className="text-xs border rounded px-2 py-1"
+                                        className="text-xs border rounded px-2 py-1 mobile-dropdown"
                                     >
                                         <option value="ATTESA">Lavoro: In arrivo</option>
                                         <option value="RICEVUTO">Lavoro: Arrivato</option>
@@ -651,7 +727,7 @@
                                     <select 
                                         value={lavoro.StatoStampa}
                                         onChange={(e) => onUpdateStatus(lavoro.id, 'StatoStampa', e.target.value)}
-                                        className="text-xs border rounded px-2 py-1"
+                                        className="text-xs border rounded px-2 py-1 mobile-dropdown"
                                     >
                                         <option value="NON_INIZIATA">Non consegnato</option>
                                         <option value="CONSEGNATA">🏁 Consegnato (Archivia)</option>
@@ -1009,51 +1085,51 @@
                     </div>
 
                     <div className="max-w-7xl mx-auto px-4 py-4 dashboard-container">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                            <div className="bg-white rounded-lg shadow-sm p-3">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 mobile-stats">
+                            <div className="bg-white rounded-lg shadow-sm p-3 mobile-stat-card">
                                 <div className="flex items-center">
-                                    <div className="p-1.5 bg-blue-100 rounded-lg">
+                                    <div className="p-1.5 bg-blue-100 rounded-lg mobile-stat-icon">
                                         <i className="fas fa-cube text-blue-600 text-sm"></i>
                                     </div>
                                     <div className="ml-2">
-                                        <p className="text-xs font-medium text-gray-600">Totale Lavori</p>
-                                        <p className="text-xl font-bold text-gray-900">{lavori.length}</p>
+                                        <p className="text-xs font-medium text-gray-600 mobile-stat-text">Totale Lavori</p>
+                                        <p className="text-xl font-bold text-gray-900 mobile-stat-number">{lavori.length}</p>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div className="bg-white rounded-lg shadow-sm p-3">
+                            <div className="bg-white rounded-lg shadow-sm p-3 mobile-stat-card">
                                 <div className="flex items-center">
-                                    <div className="p-1.5 bg-yellow-100 rounded-lg">
+                                    <div className="p-1.5 bg-yellow-100 rounded-lg mobile-stat-icon">
                                         <i className="fas fa-clock text-yellow-600 text-sm"></i>
                                     </div>
                                     <div className="ml-2">
-                                        <p className="text-xs font-medium text-gray-600">CAD Attesa</p>
-                                        <p className="text-xl font-bold text-gray-900">{lavori.filter(l => l.StatoCAD === 'ATTESA').length}</p>
+                                        <p className="text-xs font-medium text-gray-600 mobile-stat-text">CAD Attesa</p>
+                                        <p className="text-xl font-bold text-gray-900 mobile-stat-number">{lavori.filter(l => l.StatoCAD === 'ATTESA').length}</p>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div className="bg-white rounded-lg shadow-sm p-3">
+                            <div className="bg-white rounded-lg shadow-sm p-3 mobile-stat-card">
                                 <div className="flex items-center">
-                                    <div className="p-1.5 bg-orange-100 rounded-lg">
+                                    <div className="p-1.5 bg-orange-100 rounded-lg mobile-stat-icon">
                                         <i className="fas fa-print text-orange-600 text-sm"></i>
                                     </div>
                                     <div className="ml-2">
-                                        <p className="text-xs font-medium text-gray-600">In Stampa</p>
-                                        <p className="text-xl font-bold text-gray-900">{lavori.filter(l => l.StatoStampa === 'IN_CORSO').length}</p>
+                                        <p className="text-xs font-medium text-gray-600 mobile-stat-text">In Stampa</p>
+                                        <p className="text-xl font-bold text-gray-900 mobile-stat-number">{lavori.filter(l => l.StatoStampa === 'IN_CORSO').length}</p>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div className="bg-white rounded-lg shadow-sm p-3">
+                            <div className="bg-white rounded-lg shadow-sm p-3 mobile-stat-card">
                                 <div className="flex items-center">
-                                    <div className="p-1.5 bg-green-100 rounded-lg">
+                                    <div className="p-1.5 bg-green-100 rounded-lg mobile-stat-icon">
                                         <i className="fas fa-check text-green-600 text-sm"></i>
                                     </div>
                                     <div className="ml-2">
-                                        <p className="text-xs font-medium text-gray-600">Completati</p>
-                                        <p className="text-xl font-bold text-gray-900">{lavori.filter(l => l.StatoStampa === 'COMPLETATA').length}</p>
+                                        <p className="text-xs font-medium text-gray-600 mobile-stat-text">Completati</p>
+                                        <p className="text-xl font-bold text-gray-900 mobile-stat-number">{lavori.filter(l => l.StatoStampa === 'COMPLETATA').length}</p>
                                     </div>
                                 </div>
                             </div>

@@ -181,23 +181,24 @@
                 min-width: 0 !important;
             }
             
-            /* Pallini mobile con dimensioni fisse */
+            /* Pallini mobile con dimensioni corrette per contenere 5 elementi */
             .mobile-timeline-step {
-                width: 1.75rem !important;
-                height: 1.75rem !important;
-                font-size: 0.75rem !important;
+                width: 1.5rem !important;
+                height: 1.5rem !important;
+                font-size: 0.65rem !important;
                 flex-shrink: 0 !important;
                 margin: 0 !important;
             }
             
-            /* Label mobile centrate */
+            /* Label mobile più compatte */
             .mobile-timeline-label {
-                font-size: 0.6rem !important;
+                font-size: 0.55rem !important;
                 text-align: center !important;
-                line-height: 1.1 !important;
-                margin-top: 0.25rem !important;
+                line-height: 1 !important;
+                margin-top: 0.2rem !important;
                 width: 100% !important;
                 word-wrap: break-word !important;
+                max-width: 2rem !important;
             }
             
             /* Statistiche più compatte */
@@ -630,7 +631,7 @@
                                 
                                 return (
                                     <React.Fragment key={stepNum}>
-                                        <div className="flex flex-col items-center">
+                                        <div className="flex flex-col items-center mobile-step-container">
                                             <div 
                                                 className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm timeline-step mobile-timeline-step ${stepColor}`}
                                                 onClick={() => stepNum > 1 && onToggleStep(lavoro.id, stepNum, lavoro.TipoLavoro)}

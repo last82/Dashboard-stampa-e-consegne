@@ -68,7 +68,7 @@
             background-color: #dbeafe !important;
         }
         
-        /* ✅ STEP 1: Container responsive sicuri */
+        /* ✅ RESPONSIVE MOBILE IMPROVEMENTS */
         @media (max-width: 768px) {
             .dashboard-container {
                 padding: 0.75rem !important;
@@ -102,7 +102,7 @@
                 font-size: 0.75rem !important;
             }
             
-            /* ✅ STEP 2: Badge e dropdown responsive */
+            /* Badge e dropdown responsive */
             .mobile-badges {
                 flex-wrap: wrap !important;
                 gap: 0.25rem !important;
@@ -140,65 +140,71 @@
                 gap: 0.25rem !important;
             }
             
-            /* Timeline più compatta */
-            .mobile-timeline {
-                margin: 0.5rem 0 !important;
-            }
-            
-            .mobile-timeline-step {
-                width: 2rem !important;
-                height: 2rem !important;
-                font-size: 0.75rem !important;
-            }
-            
-            .mobile-timeline-label {
-                font-size: 0.625rem !important;
-                max-width: 2.5rem !important;
-            }
-            
-            /* ✅ STEP 2.1: Timeline mobile completamente ridisegnata */
-            .mobile-timeline-connector {
+            /* ✅ TIMELINE MOBILE - SOLUZIONE A DUE RIGHE */
+            .mobile-timeline-desktop {
                 display: none !important;
             }
             
-            /* Timeline container mobile-first */
-            .mobile-timeline-container {
-                display: flex !important;
-                justify-content: space-around !important;
-                align-items: flex-start !important;
-                flex-wrap: nowrap !important;
-                gap: 0.5rem !important;
-                padding: 0 !important;
+            .mobile-timeline-mobile {
+                display: block !important;
                 margin: 0.75rem 0 !important;
             }
             
-            /* Step container mobile */
-            .mobile-step-container {
+            /* Container a griglia per 2 righe */
+            .mobile-timeline-grid {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                grid-template-rows: repeat(2, auto) !important;
+                gap: 0.75rem !important;
+                align-items: center !important;
+                justify-items: center !important;
+            }
+            
+            .mobile-timeline-grid-3d {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                grid-template-rows: repeat(3, auto) !important;
+                gap: 0.5rem !important;
+                align-items: center !important;
+                justify-items: center !important;
+            }
+            
+            /* Step mobile nella griglia */
+            .mobile-step-grid {
                 display: flex !important;
                 flex-direction: column !important;
                 align-items: center !important;
-                flex: 1 !important;
-                min-width: 0 !important;
+                width: 100% !important;
             }
             
-            /* Pallini mobile con dimensioni corrette per contenere 5 elementi */
+            /* Step 5 per lavori 3D che occupa tutta la larghezza */
+            .mobile-step-full-width {
+                grid-column: 1 / -1 !important;
+            }
+            
+            /* Pallini mobile ottimizzati */
             .mobile-timeline-step {
-                width: 1.5rem !important;
-                height: 1.5rem !important;
-                font-size: 0.65rem !important;
+                width: 2.5rem !important;
+                height: 2.5rem !important;
+                font-size: 0.875rem !important;
                 flex-shrink: 0 !important;
                 margin: 0 !important;
             }
             
-            /* Label mobile più compatte */
+            /* Label mobile più grandi e leggibili */
             .mobile-timeline-label {
-                font-size: 0.55rem !important;
+                font-size: 0.7rem !important;
                 text-align: center !important;
-                line-height: 1 !important;
-                margin-top: 0.2rem !important;
+                line-height: 1.1 !important;
+                margin-top: 0.375rem !important;
                 width: 100% !important;
                 word-wrap: break-word !important;
-                max-width: 2rem !important;
+                max-width: 4rem !important;
+            }
+            
+            /* Nasconde connettori su mobile */
+            .mobile-timeline-connector {
+                display: none !important;
             }
             
             /* Statistiche più compatte */
@@ -221,6 +227,17 @@
             
             .mobile-stat-number {
                 font-size: 1.25rem !important;
+            }
+        }
+        
+        /* Timeline desktop normale */
+        @media (min-width: 769px) {
+            .mobile-timeline-desktop {
+                display: flex !important;
+            }
+            
+            .mobile-timeline-mobile {
+                display: none !important;
             }
         }
     </style>
@@ -415,8 +432,8 @@
             );
         }
 
-        // Componente Card Lavoro
-        function CardLavoro({ lavoro, onToggleStep, onUpdateStatus }) {
+        // ✅ COMPONENTE TIMELINE SEPARATO PER MIGLIORE GESTIONE
+        function TimelineComponent({ lavoro, onToggleStep }) {
             function getDaysUntilDelivery(dataConsegna) {
                 if (!dataConsegna) return null;
                 const today = new Date();
@@ -425,7 +442,6 @@
                 return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             }
 
-            // ✅ Verifica ritardi per lavori 3D usando le date timeline
             function isPhaseOverdue(lavoro, phase) {
                 if (lavoro.TipoLavoro !== '3D') return false;
                 
@@ -433,20 +449,20 @@
                 today.setHours(0, 0, 0, 0);
                 
                 switch(phase) {
-                    case 'richiesta': // Step 3 per lavori 3D
+                    case 'richiesta':
                         return lavoro.DataRichiestaCAD && 
                                new Date(lavoro.DataRichiestaCAD) < today && 
                                lavoro.StatoCAD === 'ATTESA';
-                    case 'verifica': // Step 4 per lavori 3D  
+                    case 'verifica':
                         return lavoro.DataVerificaFile && 
                                new Date(lavoro.DataVerificaFile) < today && 
                                lavoro.StatoCAD === 'RICEVUTO' && 
                                lavoro.StatoStampa === 'NON_INIZIATA';
-                    case 'stampa': // Step 4 per lavori 3D
+                    case 'stampa':
                         return lavoro.DataPromemoriStampa && 
                                new Date(lavoro.DataPromemoriStampa) < today && 
                                lavoro.StatoStampa === 'NON_INIZIATA';
-                    case 'finale': // Step 5 per lavori 3D
+                    case 'finale':
                         return lavoro.DataPromemoriaFinale && 
                                new Date(lavoro.DataPromemoriaFinale) < today && 
                                lavoro.StatoStampa !== 'CONSEGNATA';
@@ -458,19 +474,19 @@
             function getSteps(lavoro) {
                 if (lavoro.TipoLavoro === 'TRADIZIONALE') {
                     return {
-                        step1: true, // Sempre inviata
-                        step2: lavoro.StatoRicezione === 'RICEVUTA', // ✅ Ricevuta in LAB
-                        step3: lavoro.StatoSpedizione === 'SPEDITO', // Spedita
-                        step4: lavoro.StatoCAD === 'RICEVUTO', // Arrivata
-                        step5: lavoro.StatoStampa === 'CONSEGNATA' // Consegna
+                        step1: true,
+                        step2: lavoro.StatoRicezione === 'RICEVUTA',
+                        step3: lavoro.StatoSpedizione === 'SPEDITO',
+                        step4: lavoro.StatoCAD === 'RICEVUTO',
+                        step5: lavoro.StatoStampa === 'CONSEGNATA'
                     };
                 } else {
                     return {
-                        step1: true, // Sempre inviata
-                        step2: lavoro.StatoRicezione === 'RICEVUTA', // ✅ Ricevuta in LAB
-                        step3: lavoro.StatoCAD === 'RICEVUTO', // CAD
-                        step4: lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA', // Stampa
-                        step5: lavoro.StatoStampa === 'CONSEGNATA' // Consegna
+                        step1: true,
+                        step2: lavoro.StatoRicezione === 'RICEVUTA',
+                        step3: lavoro.StatoCAD === 'RICEVUTO',
+                        step4: lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA',
+                        step5: lavoro.StatoStampa === 'CONSEGNATA'
                     };
                 }
             }
@@ -479,18 +495,16 @@
                 const steps = getSteps(lavoro);
                 const isCompleted = steps[`step${stepNumber}`];
                 
-                // ✅ Verifica ritardi per lavori 3D usando le date timeline
                 if (lavoro.TipoLavoro === '3D') {
-                    // Mappatura corretta step → fase
                     const stepToPhase = {
-                        3: 'richiesta', // CAD
-                        4: 'stampa',    // Stampa  
-                        5: 'finale'     // Finale
+                        3: 'richiesta',
+                        4: 'stampa',
+                        5: 'finale'
                     };
                     const currentPhase = stepToPhase[stepNumber];
                     
                     if (currentPhase && isPhaseOverdue(lavoro, currentPhase)) {
-                        return 'bg-red-500'; // Rosso per ritardo
+                        return 'bg-red-500';
                     }
                 }
                 
@@ -512,6 +526,170 @@
             }
 
             const steps = getSteps(lavoro);
+
+            // ✅ TIMELINE DESKTOP (orizzontale)
+            const renderDesktopTimeline = () => {
+                const stepCount = 5;
+                const labels = lavoro.TipoLavoro === 'TRADIZIONALE' ? 
+                    ['', 'Inviata', 'Ricevuta', 'Spedita', 'Arrivata', 'Consegna'] :
+                    ['', 'Inviata', 'Ricevuta', 'CAD', 'Stampa', 'Consegna'];
+
+                const timelineDates = lavoro.TipoLavoro === '3D' ? [
+                    null,
+                    null,
+                    lavoro.DataRichiestaCAD,
+                    lavoro.DataPromemoriStampa,
+                    lavoro.DataPromemoriaFinale
+                ] : [null, null, null, null, null];
+
+                return (
+                    <div className="flex justify-between items-center mb-3 mobile-timeline-desktop">
+                        {[1, 2, 3, 4, 5].map(stepNum => {
+                            const isCompleted = steps[`step${stepNum}`];
+                            const stepColor = getStepColor(lavoro, stepNum);
+                            const stepDate = lavoro.TipoLavoro === '3D' ? timelineDates[stepNum] : null;
+                            
+                            const stepToPhase = {
+                                3: 'richiesta',
+                                4: 'stampa',
+                                5: 'finale'
+                            };
+                            const isOverdue = isPhaseOverdue(lavoro, stepToPhase[stepNum]);
+
+                            return (
+                                <React.Fragment key={stepNum}>
+                                    <div className="flex flex-col items-center">
+                                        <div 
+                                            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm timeline-step ${stepColor} ${isOverdue ? 'animate-pulse' : ''}`}
+                                            onClick={() => stepNum > 1 && onToggleStep(lavoro.id, stepNum, lavoro.TipoLavoro)}
+                                            title={`${labels[stepNum]}${stepDate ? '\nScadenza: ' + new Date(stepDate).toLocaleDateString('it-IT') : ''}${isOverdue ? '\n⚠️ IN RITARDO!' : ''}`}
+                                            style={{ cursor: stepNum > 1 ? 'pointer' : 'default' }}
+                                        >
+                                            {isCompleted || (stepNum === 4 && lavoro.StatoStampa === 'IN_CORSO') ? 
+                                                <i className="fas fa-check"></i> : stepNum}
+                                        </div>
+                                        <div className="text-xs mt-1 text-center max-w-16">
+                                            <div className={`font-medium leading-tight ${isOverdue ? 'text-red-600' : 'text-gray-700'}`}>
+                                                {labels[stepNum]}
+                                            </div>
+                                            {stepDate && (
+                                                <div className={`text-xs leading-tight ${isOverdue ? 'text-red-500 font-bold' : 'text-gray-500'}`}>
+                                                    {new Date(stepDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })}
+                                                    {isOverdue && <div>⚠️</div>}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {stepNum < 5 && <div className="flex-1 h-0.5 bg-gray-300 mx-2"></div>}
+                                </React.Fragment>
+                            );
+                        })}
+                    </div>
+                );
+            };
+
+            // ✅ TIMELINE MOBILE (griglia 2x2 o 2x3)
+            const renderMobileTimeline = () => {
+                const labels = lavoro.TipoLavoro === 'TRADIZIONALE' ? 
+                    ['', 'Inviata', 'Ricevuta', 'Spedita', 'Arrivata', 'Consegna'] :
+                    ['', 'Inviata', 'Ricevuta', 'CAD', 'Stampa', 'Consegna'];
+
+                const timelineDates = lavoro.TipoLavoro === '3D' ? [
+                    null,
+                    null,
+                    lavoro.DataRichiestaCAD,
+                    lavoro.DataPromemoriStampa,
+                    lavoro.DataPromemoriaFinale
+                ] : [null, null, null, null, null];
+
+                const renderStep = (stepNum) => {
+                    const isCompleted = steps[`step${stepNum}`];
+                    const stepColor = getStepColor(lavoro, stepNum);
+                    const stepDate = lavoro.TipoLavoro === '3D' ? timelineDates[stepNum] : null;
+                    
+                    const stepToPhase = {
+                        3: 'richiesta',
+                        4: 'stampa',
+                        5: 'finale'
+                    };
+                    const isOverdue = isPhaseOverdue(lavoro, stepToPhase[stepNum]);
+
+                    return (
+                        <div 
+                            key={stepNum} 
+                            className={`mobile-step-grid ${stepNum === 5 && lavoro.TipoLavoro === '3D' ? 'mobile-step-full-width' : ''}`}
+                        >
+                            <div 
+                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm timeline-step mobile-timeline-step ${stepColor} ${isOverdue ? 'animate-pulse' : ''}`}
+                                onClick={() => stepNum > 1 && onToggleStep(lavoro.id, stepNum, lavoro.TipoLavoro)}
+                                title={`${labels[stepNum]}${stepDate ? '\nScadenza: ' + new Date(stepDate).toLocaleDateString('it-IT') : ''}${isOverdue ? '\n⚠️ IN RITARDO!' : ''}`}
+                                style={{ cursor: stepNum > 1 ? 'pointer' : 'default' }}
+                            >
+                                {isCompleted || (stepNum === 4 && lavoro.StatoStampa === 'IN_CORSO') ? 
+                                    <i className="fas fa-check"></i> : stepNum}
+                            </div>
+                            <div className="text-xs mt-1 text-center mobile-timeline-label">
+                                <div className={`font-medium leading-tight ${isOverdue ? 'text-red-600' : 'text-gray-700'}`}>
+                                    {labels[stepNum]}
+                                </div>
+                                {stepDate && (
+                                    <div className={`text-xs leading-tight ${isOverdue ? 'text-red-500 font-bold' : 'text-gray-500'}`}>
+                                        {new Date(stepDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })}
+                                        {isOverdue && <div>⚠️</div>}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                };
+
+                return (
+                    <div className="mobile-timeline-mobile">
+                        {lavoro.TipoLavoro === 'TRADIZIONALE' ? (
+                            // Layout 2x2 + 1 per TRADIZIONALE
+                            <div className="mobile-timeline-grid">
+                                {renderStep(1)}
+                                {renderStep(2)}
+                                {renderStep(3)}
+                                {renderStep(4)}
+                                <div className="mobile-step-full-width" style={{ gridColumn: '1 / -1' }}>
+                                    {renderStep(5)}
+                                </div>
+                            </div>
+                        ) : (
+                            // Layout 2x2 + 1 per 3D
+                            <div className="mobile-timeline-grid">
+                                {renderStep(1)}
+                                {renderStep(2)}
+                                {renderStep(3)}
+                                {renderStep(4)}
+                                <div className="mobile-step-full-width" style={{ gridColumn: '1 / -1' }}>
+                                    {renderStep(5)}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            return (
+                <>
+                    {renderDesktopTimeline()}
+                    {renderMobileTimeline()}
+                </>
+            );
+        }
+
+        // Componente Card Lavoro
+        function CardLavoro({ lavoro, onToggleStep, onUpdateStatus }) {
+            function getDaysUntilDelivery(dataConsegna) {
+                if (!dataConsegna) return null;
+                const today = new Date();
+                const delivery = new Date(dataConsegna);
+                const diffTime = delivery - today;
+                return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            }
+
             const daysUntil = getDaysUntilDelivery(lavoro.DataConsegna);
 
             return (
@@ -622,89 +800,8 @@
                         </div>
                     </div>
 
-                    <div className="flex justify-between items-center mb-3 mobile-timeline mobile-timeline-container">
-                        {lavoro.TipoLavoro === 'TRADIZIONALE' ? (
-                            [1, 2, 3, 4, 5].map(stepNum => {
-                                const isCompleted = steps[`step${stepNum}`];
-                                const labels = ['', 'Inviata', 'Ricevuta', 'Spedita', 'Arrivata', 'Consegna'];
-                                const stepColor = getStepColor(lavoro, stepNum);
-                                
-                                return (
-                                    <React.Fragment key={stepNum}>
-                                        <div className="flex flex-col items-center mobile-step-container">
-                                            <div 
-                                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm timeline-step mobile-timeline-step ${stepColor}`}
-                                                onClick={() => stepNum > 1 && onToggleStep(lavoro.id, stepNum, lavoro.TipoLavoro)}
-                                                title={`Click per ${isCompleted ? 'annullare' : 'completare'}: ${labels[stepNum]}`}
-                                                style={{ cursor: stepNum > 1 ? 'pointer' : 'default' }}
-                                            >
-                                                {isCompleted ? <i className="fas fa-check"></i> : stepNum}
-                                            </div>
-                                            <div className="text-xs mt-1 text-center max-w-16 mobile-timeline-label">
-                                                <div className="font-medium text-gray-700 leading-tight">
-                                                    {labels[stepNum]}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {stepNum < 5 && <div className="flex-1 h-0.5 bg-gray-300 mx-2 mobile-timeline-connector"></div>}
-                                    </React.Fragment>
-                                );
-                            })
-                        ) : (
-                            [1, 2, 3, 4, 5].map(stepNum => {
-                                const isCompleted = steps[`step${stepNum}`];
-                                const labels = ['', 'Inviata', 'Ricevuta', 'CAD', 'Stampa', 'Consegna'];
-                                const stepColor = getStepColor(lavoro, stepNum);
-                                
-                                // ✅ Date timeline per lavori 3D (ora 5 step)
-                                const timelineDates = [
-                                    null,                           // Step 1: Inviata
-                                    null,                           // Step 2: Ricevuta (no data specifica)
-                                    lavoro.DataRichiestaCAD,       // Step 3: CAD  
-                                    lavoro.DataPromemoriStampa,    // Step 4: Stampa
-                                    lavoro.DataPromemoriaFinale    // Step 5: Finale
-                                ];
-                                const stepDate = timelineDates[stepNum];
-                                
-                                // Mappatura corretta step → fase per controllo ritardi
-                                const stepToPhase = {
-                                    3: 'richiesta', // CAD
-                                    4: 'stampa',    // Stampa
-                                    5: 'finale'     // Finale
-                                };
-                                const isOverdue = isPhaseOverdue(lavoro, stepToPhase[stepNum]);
-                                
-                                return (
-                                    <React.Fragment key={stepNum}>
-                                        <div className="flex flex-col items-center">
-                                            <div 
-                                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm timeline-step ${stepColor} ${isOverdue ? 'animate-pulse' : ''}`}
-                                                onClick={() => stepNum > 1 && onToggleStep(lavoro.id, stepNum, lavoro.TipoLavoro)}
-                                                title={`${labels[stepNum]}${stepDate ? '\nScadenza: ' + new Date(stepDate).toLocaleDateString('it-IT') : ''}${isOverdue ? '\n⚠️ IN RITARDO!' : ''}`}
-                                                style={{ cursor: stepNum > 1 ? 'pointer' : 'default' }}
-                                            >
-                                                {isCompleted || (stepNum === 4 && lavoro.StatoStampa === 'IN_CORSO') ? 
-                                                    <i className="fas fa-check"></i> : stepNum}
-                                            </div>
-                                            <div className="text-xs mt-1 text-center max-w-16">
-                                                <div className={`font-medium leading-tight ${isOverdue ? 'text-red-600' : 'text-gray-700'}`}>
-                                                    {labels[stepNum]}
-                                                </div>
-                                                {/* Mostra data scadenza solo per lavori 3D */}
-                                                {stepDate && (
-                                                    <div className={`text-xs leading-tight ${isOverdue ? 'text-red-500 font-bold' : 'text-gray-500'}`}>
-                                                        {new Date(stepDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })}
-                                                        {isOverdue && <div>⚠️</div>}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                        {stepNum < 5 && <div className="flex-1 h-0.5 bg-gray-300 mx-2"></div>}
-                                    </React.Fragment>
-                                );
-                            })
-                        )}
-                    </div>
+                    {/* ✅ Timeline Component - Gestisce automaticamente desktop/mobile */}
+                    <TimelineComponent lavoro={lavoro} onToggleStep={onToggleStep} />
 
                     <div className="flex justify-between items-center">
                         <div className="flex space-x-2 mobile-controls">

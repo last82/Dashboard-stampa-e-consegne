@@ -475,7 +475,7 @@
                 if (lavoro.TipoLavoro === 'TRADIZIONALE') {
                     return {
                         step1: true,
-                        step2: lavoro.StatoRicezione === 'RICEVUTA',
+                        step2: lavoro.StatoRicezione === 'RICEVUTO',
                         step3: lavoro.StatoSpedizione === 'SPEDITO',
                         step4: lavoro.StatoCAD === 'RICEVUTO',
                         step5: lavoro.StatoStampa === 'CONSEGNATA'
@@ -483,7 +483,7 @@
                 } else {
                     return {
                         step1: true,
-                        step2: lavoro.StatoRicezione === 'RICEVUTA',
+                        step2: lavoro.StatoRicezione === 'RICEVUTO',
                         step3: lavoro.StatoCAD === 'RICEVUTO',
                         step4: lavoro.StatoStampa === 'COMPLETATA' || lavoro.StatoStampa === 'CONSEGNATA',
                         step5: lavoro.StatoStampa === 'CONSEGNATA'
@@ -949,7 +949,7 @@
                             StatoCAD: record.fields.StatoCAD || 'ATTESA',
                             StatoStampa: record.fields.StatoStampa || 'NON_INIZIATA',
                             StatoSpedizione: record.fields.StatoSpedizione || 'NON_SPEDITO',
-                            StatoRicezione: record.fields.StatoRicezione || 'NON_RICEVUTA', // ✅ Nuovo campo
+                            StatoRicezione: record.fields.StatoRicezione || 'NON_RICEVUTO', // ✅ Campo ora esistente
                             // Campi timeline dal workflow n8n
                             DataRichiestaCAD: record.fields.DataRichiestaCAD || null,
                             DataVerificaFile: record.fields.DataVerificaFile || null,

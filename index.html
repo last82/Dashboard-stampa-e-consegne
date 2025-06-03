@@ -156,15 +156,48 @@
                 max-width: 2.5rem !important;
             }
             
-            /* ✅ STEP 2.1: Nascondi linee di collegamento su mobile */
+            /* ✅ STEP 2.1: Timeline mobile completamente ridisegnata */
             .mobile-timeline-connector {
                 display: none !important;
             }
             
-            /* Timeline container più centrata su mobile */
+            /* Timeline container mobile-first */
             .mobile-timeline-container {
-                justify-content: center !important;
-                gap: 1rem !important;
+                display: flex !important;
+                justify-content: space-around !important;
+                align-items: flex-start !important;
+                flex-wrap: nowrap !important;
+                gap: 0.5rem !important;
+                padding: 0 !important;
+                margin: 0.75rem 0 !important;
+            }
+            
+            /* Step container mobile */
+            .mobile-step-container {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                flex: 1 !important;
+                min-width: 0 !important;
+            }
+            
+            /* Pallini mobile con dimensioni fisse */
+            .mobile-timeline-step {
+                width: 1.75rem !important;
+                height: 1.75rem !important;
+                font-size: 0.75rem !important;
+                flex-shrink: 0 !important;
+                margin: 0 !important;
+            }
+            
+            /* Label mobile centrate */
+            .mobile-timeline-label {
+                font-size: 0.6rem !important;
+                text-align: center !important;
+                line-height: 1.1 !important;
+                margin-top: 0.25rem !important;
+                width: 100% !important;
+                word-wrap: break-word !important;
             }
             
             /* Statistiche più compatte */
@@ -588,7 +621,7 @@
                         </div>
                     </div>
 
-                    <div className="flex justify-between items-center mb-3 mobile-timeline">
+                    <div className="flex justify-between items-center mb-3 mobile-timeline mobile-timeline-container">
                         {lavoro.TipoLavoro === 'TRADIZIONALE' ? (
                             [1, 2, 3, 4, 5].map(stepNum => {
                                 const isCompleted = steps[`step${stepNum}`];
@@ -612,7 +645,7 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        {stepNum < 5 && <div className="flex-1 h-0.5 bg-gray-300 mx-2"></div>}
+                                        {stepNum < 5 && <div className="flex-1 h-0.5 bg-gray-300 mx-2 mobile-timeline-connector"></div>}
                                     </React.Fragment>
                                 );
                             })

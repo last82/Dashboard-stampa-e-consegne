@@ -927,6 +927,8 @@
         function Dashboard() {
             const [lavori, setLavori] = useState([]);
             const [loading, setLoading] = useState(true);
+            const [lastSync, setLastSync] = useState(new Date());
+            const [autoRefresh, setAutoRefresh] = useState(true);
             const lavoriRef = useRef(lavori); // Ref per evitare stale closure
 
             // Aggiorna il ref ogni volta che cambiano i lavori
@@ -980,6 +982,8 @@
                     
                     const attivi = formattedData.filter(l => !l.Archiviato);
                     setLavori(attivi);
+                    setLastSync(new Date());
+                    console.log('🔄 Dati sincronizzati:', attivi.length, 'lavori');
                 } catch (err) {
                     console.error('Errore caricamento:', err);
                 }
@@ -989,6 +993,37 @@
             useEffect(() => {
                 loadData();
             }, [loadData]);
+
+            // 🔄 AUTO-REFRESH: Polling ogni 60 secondi quando attivo
+            useEffect(() => {
+                if (!autoRefresh) return;
+                
+                const interval = setInterval(() => {
+                    if (!loading && !document.hidden) {
+                        console.log('🔄 Auto-refresh: caricamento dati...');
+                        loadData();
+                    }
+                }, 60000); // 60 secondi
+                
+                return () => clearInterval(interval);
+            }, [loadData, loading, autoRefresh]);
+
+            // 🔄 VISIBILITY API: Refresh quando la tab torna attiva
+            useEffect(() => {
+                const handleVisibilityChange = () => {
+                    if (!document.hidden && !loading) {
+                        const timeSinceLastSync = new Date() - lastSync;
+                        // Refresh se sono passati più di 30 secondi dall'ultima sincronizzazione
+                        if (timeSinceLastSync > 30000) {
+                            console.log('🔄 Tab focus: refresh dati...');
+                            loadData();
+                        }
+                    }
+                };
+                
+                document.addEventListener('visibilitychange', handleVisibilityChange);
+                return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+            }, [loadData, loading, lastSync]);
 
             // Ordinamento lavori per data di consegna
             const lavoriOrdinati = useMemo(() => {

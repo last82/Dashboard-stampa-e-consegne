@@ -67,6 +67,41 @@
         .fc-day-today {
             background-color: #dbeafe !important;
         }
+        
+        /* ✅ STEP 1: Container responsive sicuri */
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 0.75rem !important;
+            }
+            
+            .card-hover {
+                margin-bottom: 0.75rem !important;
+            }
+            
+            /* Calendario più compatto su mobile */
+            .fc-toolbar {
+                flex-direction: column !important;
+                gap: 0.5rem !important;
+            }
+            
+            .fc-toolbar-chunk {
+                display: flex !important;
+                justify-content: center !important;
+            }
+            
+            /* Header compatto */
+            .dashboard-header {
+                padding: 0.75rem !important;
+            }
+            
+            .dashboard-title {
+                font-size: 1.25rem !important;
+            }
+            
+            .dashboard-subtitle {
+                font-size: 0.75rem !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -502,16 +537,21 @@
                                 
                                 // ✅ Date timeline per lavori 3D (ora 5 step)
                                 const timelineDates = [
-                                    null,
-                                    null, // Ricezione non ha data specifica
-                                    lavoro.DataRichiestaCAD,
-                                    lavoro.DataVerificaFile, 
-                                    lavoro.DataPromemoriStampa,
-                                    lavoro.DataPromemoriaFinale
+                                    null,                           // Step 1: Inviata
+                                    null,                           // Step 2: Ricevuta (no data specifica)
+                                    lavoro.DataRichiestaCAD,       // Step 3: CAD  
+                                    lavoro.DataPromemoriStampa,    // Step 4: Stampa
+                                    lavoro.DataPromemoriaFinale    // Step 5: Finale
                                 ];
                                 const stepDate = timelineDates[stepNum];
-                                const phases = ['', 'ricezione', 'richiesta', 'verifica', 'stampa', 'finale'];
-                                const isOverdue = isPhaseOverdue(lavoro, phases[stepNum]);
+                                
+                                // Mappatura corretta step → fase per controllo ritardi
+                                const stepToPhase = {
+                                    3: 'richiesta', // CAD
+                                    4: 'stampa',    // Stampa
+                                    5: 'finale'     // Finale
+                                };
+                                const isOverdue = isPhaseOverdue(lavoro, stepToPhase[stepNum]);
                                 
                                 return (
                                     <React.Fragment key={stepNum}>
@@ -962,13 +1002,13 @@
             return (
                 <div className="min-h-screen bg-gray-50">
                     <div className="bg-white shadow-sm border-b">
-                        <div className="max-w-7xl mx-auto px-4 py-3">
-                            <h1 className="text-xl font-bold text-gray-900">🦷 Dashboard Prescrizioni 3D</h1>
-                            <p className="text-xs text-gray-600">Gestione lavori odontoiatrici digitali - FullCalendar + Timeline</p>
+                        <div className="max-w-7xl mx-auto px-4 py-3 dashboard-header">
+                            <h1 className="text-xl font-bold text-gray-900 dashboard-title">🦷 Dashboard Prescrizioni 3D</h1>
+                            <p className="text-xs text-gray-600 dashboard-subtitle">Gestione lavori odontoiatrici digitali - FullCalendar + Timeline</p>
                         </div>
                     </div>
 
-                    <div className="max-w-7xl mx-auto px-4 py-4">
+                    <div className="max-w-7xl mx-auto px-4 py-4 dashboard-container">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                             <div className="bg-white rounded-lg shadow-sm p-3">
                                 <div className="flex items-center">

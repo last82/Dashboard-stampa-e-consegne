@@ -298,14 +298,15 @@
             const [loading, setLoading] = useState(true);
 
             useEffect(() => {
-                // Controlla se l'utente è già loggato (sessione memorizzata)
-                const savedUser = sessionStorage.getItem('dashboard_user');
+                // Controlla se l'utente è già loggato (localStorage per persistenza)
+                const savedUser = localStorage.getItem('dashboard_user');
                 if (savedUser) {
                     try {
                         setUser(JSON.parse(savedUser));
+                        console.log('✅ Sessione recuperata:', JSON.parse(savedUser).displayName);
                     } catch (e) {
                         console.error('Errore nel recupero sessione:', e);
-                        sessionStorage.removeItem('dashboard_user');
+                        localStorage.removeItem('dashboard_user');
                     }
                 }
                 setLoading(false);
@@ -324,7 +325,7 @@
                 };
 
                 setUser(userSession);
-                sessionStorage.setItem('dashboard_user', JSON.stringify(userSession));
+                localStorage.setItem('dashboard_user', JSON.stringify(userSession));
                 
                 console.log('✅ Login effettuato:', userSession.displayName);
                 return userSession;
@@ -332,7 +333,7 @@
 
             const logout = () => {
                 setUser(null);
-                sessionStorage.removeItem('dashboard_user');
+                localStorage.removeItem('dashboard_user');
                 console.log('👋 Logout effettuato');
             };
 

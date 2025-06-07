@@ -22,3 +22,9 @@ touch index.html css/style.css js/app.jsx \
 ```
 
 All'interno di `index.html` sono poi collegati `css/style.css` e `js/app.jsx`.
+
+## Migliorie recenti
+- Sanitizzazione dell'input utente in fase di login
+- Gestione della sessione in `localStorage` con codifica base64
+- Error Boundary per intercettare errori runtime
+- Ottimizzazioni di rendering con `React.memo` e `useMemo`

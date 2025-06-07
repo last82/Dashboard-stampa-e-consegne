@@ -5,6 +5,33 @@
             return value.replace(/[<>&'"`]/g, '');
         }
 
+        // 💾 Gestione sicura (base64) della sessione utente in localStorage
+        function loadUserSession() {
+            const saved = localStorage.getItem('dashboard_user');
+            if (!saved) return null;
+            try {
+                const json = atob(saved);
+                return JSON.parse(json);
+            } catch (e) {
+                console.error('Errore nel recupero sessione:', e);
+                localStorage.removeItem('dashboard_user');
+                return null;
+            }
+        }
+
+        function saveUserSession(session) {
+            try {
+                const encoded = btoa(JSON.stringify(session));
+                localStorage.setItem('dashboard_user', encoded);
+            } catch (e) {
+                console.error('Errore salvataggio sessione:', e);
+            }
+        }
+
+        function clearUserSession() {
+            localStorage.removeItem('dashboard_user');
+        }
+
         // 🔐 CONFIGURAZIONE UTENTI
         const USERS = {
             camaioni: {
@@ -42,17 +69,10 @@
             const [loading, setLoading] = useState(true);
 
             useEffect(() => {
-                // ✅ localStorage per mantenere l'utente loggato
-                const savedUser = localStorage.getItem('dashboard_user');
-                if (savedUser) {
-                    try {
-                        const userData = JSON.parse(savedUser);
-                        setUser(userData);
-                        console.log('✅ Sessione recuperata automaticamente:', userData.displayName);
-                    } catch (e) {
-                        console.error('Errore nel recupero sessione:', e);
-                        localStorage.removeItem('dashboard_user');
-                    }
+                const userData = loadUserSession();
+                if (userData) {
+                    setUser(userData);
+                    console.log('✅ Sessione recuperata automaticamente:', userData.displayName);
                 }
                 setLoading(false);
             }, []);
@@ -72,7 +92,7 @@
                 };
 
                 setUser(userSession);
-                localStorage.setItem('dashboard_user', JSON.stringify(userSession));
+                saveUserSession(userSession);
                 
                 console.log('✅ Login effettuato e salvato:', userSession.displayName);
                 return userSession;
@@ -80,7 +100,7 @@
 
             const logout = () => {
                 setUser(null);
-                localStorage.removeItem('dashboard_user');
+                clearUserSession();
                 console.log('👋 Logout effettuato - sessione cancellata');
             };
 
@@ -282,7 +302,7 @@
         };
 
         // Componente FullCalendar
-        function CalendarioFullCalendar({ lavori, onUpdateDataConsegna }) {
+        const CalendarioFullCalendar = React.memo(function CalendarioFullCalendar({ lavori, onUpdateDataConsegna }) {
             const calendarRef = useRef(null);
             const [calendar, setCalendar] = useState(null);
             const [calendarInitialized, setCalendarInitialized] = useState(false);
@@ -369,37 +389,38 @@
                 };
             }, []); // Dipendenze vuote - si esegue solo al mount
 
+            const events = useMemo(() =>
+                lavori
+                    .filter(lavoro => lavoro.DataConsegna)
+                    .map(lavoro => ({
+                        id: lavoro.id,
+                        title: lavoro.CodicePaziente,
+                        date: lavoro.DataConsegna,
+                        backgroundColor: getEventColor(lavoro),
+                        borderColor: getEventColor(lavoro),
+                        textColor: '#ffffff',
+                        extendedProps: {
+                            laboratorio: lavoro.Laboratorio,
+                            tipoLavoro: lavoro.TipoLavoro,
+                            statoCAD: lavoro.StatoCAD,
+                            statoStampa: lavoro.StatoStampa
+                        }
+                    })),
+                [lavori]
+            );
+
             // Aggiornamento eventi quando cambiano i lavori
             useEffect(() => {
-                if (calendar && calendarInitialized && lavori.length > 0) {
-                    console.log('🔄 Aggiornamento eventi calendario...', lavori.length, 'lavori');
-                    
+                if (calendar && calendarInitialized && events.length > 0) {
+                    console.log('🔄 Aggiornamento eventi calendario...', events.length, 'eventi');
+
                     // Rimuove tutti gli eventi esistenti
                     calendar.removeAllEvents();
-                    
-                    // Crea nuovi eventi
-                    const events = lavori
-                        .filter(lavoro => lavoro.DataConsegna) // Solo lavori con data
-                        .map(lavoro => ({
-                            id: lavoro.id,
-                            title: lavoro.CodicePaziente,
-                            date: lavoro.DataConsegna,
-                            backgroundColor: getEventColor(lavoro),
-                            borderColor: getEventColor(lavoro),
-                            textColor: '#ffffff',
-                            extendedProps: {
-                                laboratorio: lavoro.Laboratorio,
-                                tipoLavoro: lavoro.TipoLavoro,
-                                statoCAD: lavoro.StatoCAD,
-                                statoStampa: lavoro.StatoStampa
-                            }
-                        }));
-                    
+
                     // Aggiunge i nuovi eventi
                     calendar.addEventSource(events);
-                    console.log('✅ Eventi aggiornati:', events.length);
                 }
-            }, [lavori, calendar, calendarInitialized]);
+            }, [events, calendar, calendarInitialized]);
 
             return (
                 <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
@@ -423,10 +444,10 @@
                     <div ref={calendarRef}></div>
                 </div>
             );
-        }
+        });
 
         // ✅ COMPONENTE TIMELINE SEPARATO PER MIGLIORE GESTIONE
-        function TimelineComponent({ lavoro, onToggleStep }) {
+        const TimelineComponent = React.memo(function TimelineComponent({ lavoro, onToggleStep }) {
             function getDaysUntilDelivery(dataConsegna) {
                 if (!dataConsegna) return null;
                 const today = new Date();
@@ -484,8 +505,10 @@
                 }
             }
 
+            const memoizedSteps = useMemo(() => getSteps(lavoro), [lavoro]);
+
             function getStepColor(lavoro, stepNumber) {
-                const steps = getSteps(lavoro);
+                const steps = memoizedSteps;
                 const isCompleted = steps[`step${stepNumber}`];
                 
                 if (lavoro.TipoLavoro === '3D') {
@@ -518,7 +541,7 @@
                 }
             }
 
-            const steps = getSteps(lavoro);
+            const steps = memoizedSteps;
 
             // ✅ TIMELINE DESKTOP (orizzontale)
             const renderDesktopTimeline = () => {
@@ -671,10 +694,10 @@
                     {renderMobileTimeline()}
                 </>
             );
-        }
+        });
 
         // Componente Card Lavoro
-        function CardLavoro({ lavoro, onToggleStep, onUpdateStatus }) {
+        const CardLavoro = React.memo(function CardLavoro({ lavoro, onToggleStep, onUpdateStatus }) {
             function getDaysUntilDelivery(dataConsegna) {
                 if (!dataConsegna) return null;
                 const today = new Date();
@@ -683,7 +706,7 @@
                 return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             }
 
-            const daysUntil = getDaysUntilDelivery(lavoro.DataConsegna);
+            const daysUntil = useMemo(() => getDaysUntilDelivery(lavoro.DataConsegna), [lavoro.DataConsegna]);
 
             return (
                 <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500 card-hover mobile-card-content">
@@ -899,7 +922,7 @@
                     </div>
                 </div>
             );
-        }
+        });
 
         // 🔐 HEADER CON INFORMAZIONI UTENTE
         function UserHeader({ user, onLogout }) {

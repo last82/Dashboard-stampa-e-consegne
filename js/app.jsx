@@ -1,5 +1,10 @@
         const { useState, useEffect, useCallback, useRef, useMemo, createContext, useContext } = React;
 
+        // 🛡️ Utility di sanificazione input
+        function sanitizeInput(value) {
+            return value.replace(/[<>&'"`]/g, '');
+        }
+
         // 🔐 CONFIGURAZIONE UTENTI
         const USERS = {
             camaioni: {
@@ -53,14 +58,16 @@
             }, []);
 
             const login = (username, password) => {
-                const userData = USERS[username.toLowerCase()];
-                
-                if (!userData || userData.password !== password) {
+                const cleanUsername = sanitizeInput(username.toLowerCase());
+                const cleanPassword = sanitizeInput(password);
+                const userData = USERS[cleanUsername];
+
+                if (!userData || userData.password !== cleanPassword) {
                     throw new Error('Nome utente o password non corretti');
                 }
 
                 const userSession = {
-                    username: username.toLowerCase(),
+                    username: cleanUsername,
                     ...userData
                 };
 
@@ -91,6 +98,33 @@
                 throw new Error('useAuth deve essere usato dentro AuthProvider');
             }
             return context;
+        }
+
+        // 🛡️ Error Boundary per catturare errori runtime
+        class ErrorBoundary extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false };
+            }
+
+            static getDerivedStateFromError() {
+                return { hasError: true };
+            }
+
+            componentDidCatch(error, info) {
+                console.error('ErrorBoundary:', error, info);
+            }
+
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="p-4 text-red-700 text-center">
+                            Qualcosa è andato storto.
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
         }
 
         // 🔐 COMPONENTE LOGIN - ✅ DESIGN MINIMALISTA CON SOLO LOGO
@@ -1479,7 +1513,9 @@
         // 🚀 BOOTSTRAP APPLICAZIONE
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(
-            <AuthProvider>
-                <App />
-            </AuthProvider>
+            <ErrorBoundary>
+                <AuthProvider>
+                    <App />
+                </AuthProvider>
+            </ErrorBoundary>
         );

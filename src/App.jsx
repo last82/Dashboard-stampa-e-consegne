@@ -1,99 +1,3 @@
-        const { useState, useEffect, useCallback, useRef, useMemo, createContext, useContext } = React;
-
-        // 🔐 CONFIGURAZIONE UTENTI
-        const USERS = {
-            camaioni: {
-                password: 'camaioni2024',
-                laboratorio: 'camaioni',
-                displayName: 'Laboratorio Camaioni',
-                role: 'lab'
-            },
-            rota: {
-                password: 'rota2024',
-                laboratorio: 'rota',
-                displayName: 'Laboratorio Rota',
-                role: 'lab'
-            },
-            studio: {
-                password: 'mandelli2024',
-                laboratorio: null, // Vede tutti i laboratori
-                displayName: 'Studio Dottori Mandelli',
-                role: 'admin'
-            }
-        };
-
-        // 📊 CONFIGURAZIONE AIRTABLE
-        const AIRTABLE_BASE_ID = 'appkaYhl810WwG7jf';
-        const AIRTABLE_TOKEN = 'patnhoUAqDz44YP5G.bc379a3490a179c8d37c0c9f5ea18d1f0379e901297137c8bc10ede9624b8135';
-        const TIMELINE_TABLE = 'tblWW6GJIxgZR8hp8';
-        const PRESCRIZIONI_TABLE = 'tblM2RwtcSmfw7OTs';
-
-        // 🔐 CONTEXT PER AUTENTICAZIONE
-        const AuthContext = createContext();
-
-        // 🔐 PROVIDER AUTENTICAZIONE - ✅ PERSISTENZA CON LOCALSTORAGE
-        function AuthProvider({ children }) {
-            const [user, setUser] = useState(null);
-            const [loading, setLoading] = useState(true);
-
-            useEffect(() => {
-                // ✅ localStorage per mantenere l'utente loggato
-                const savedUser = localStorage.getItem('dashboard_user');
-                if (savedUser) {
-                    try {
-                        const userData = JSON.parse(savedUser);
-                        setUser(userData);
-                        console.log('✅ Sessione recuperata automaticamente:', userData.displayName);
-                    } catch (e) {
-                        console.error('Errore nel recupero sessione:', e);
-                        localStorage.removeItem('dashboard_user');
-                    }
-                }
-                setLoading(false);
-            }, []);
-
-            const login = (username, password) => {
-                const userData = USERS[username.toLowerCase()];
-                
-                if (!userData || userData.password !== password) {
-                    throw new Error('Nome utente o password non corretti');
-                }
-
-                const userSession = {
-                    username: username.toLowerCase(),
-                    ...userData
-                };
-
-                setUser(userSession);
-                localStorage.setItem('dashboard_user', JSON.stringify(userSession));
-                
-                console.log('✅ Login effettuato e salvato:', userSession.displayName);
-                return userSession;
-            };
-
-            const logout = () => {
-                setUser(null);
-                localStorage.removeItem('dashboard_user');
-                console.log('👋 Logout effettuato - sessione cancellata');
-            };
-
-            return (
-                <AuthContext.Provider value={{ user, login, logout, loading }}>
-                    {children}
-                </AuthContext.Provider>
-            );
-        }
-
-        // 🔐 HOOK PER USARE L'AUTENTICAZIONE
-        function useAuth() {
-            const context = useContext(AuthContext);
-            if (!context) {
-                throw new Error('useAuth deve essere usato dentro AuthProvider');
-            }
-            return context;
-        }
-
-        // 🔐 COMPONENTE LOGIN - ✅ DESIGN MINIMALISTA CON SOLO LOGO
         function LoginPage() {
             const [username, setUsername] = useState('');
             const [password, setPassword] = useState('');
@@ -198,57 +102,9 @@
             );
         }
 
-        // API Helpers
-        const fetchAirtableData = async (baseId, table, token) => {
-            try {
-                const response = await fetch(`https://api.airtable.com/v0/${baseId}/${table}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                const data = await response.json();
-                return data.records || [];
-            } catch (error) {
-                console.error('Errore API:', error);
-                return [];
-            }
-        };
-
-        const updateAirtableRecord = async (baseId, table, token, recordId, fields) => {
-            try {
-                console.log('🔄 Tentativo aggiornamento Airtable:', { recordId, fields });
-                
-                const response = await fetch(`https://api.airtable.com/v0/${baseId}/${table}/${recordId}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ fields })
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error('❌ Errore Airtable:', {
-                        status: response.status,
-                        statusText: response.statusText,
-                        error: errorData
-                    });
-                    throw new Error(`Airtable error ${response.status}: ${JSON.stringify(errorData)}`);
-                }
-                
-                const result = await response.json();
-                console.log('✅ Aggiornamento riuscito:', result);
-                return result;
-            } catch (error) {
-                console.error('❌ Errore completo updateAirtableRecord:', error);
-                throw error;
-            }
-        };
 
         // Componente FullCalendar
-        function CalendarioFullCalendar({ lavori, onUpdateDataConsegna }) {
+        const CalendarioFullCalendar = React.memo(function CalendarioFullCalendar({ lavori, onUpdateDataConsegna }) {
             const calendarRef = useRef(null);
             const [calendar, setCalendar] = useState(null);
             const [calendarInitialized, setCalendarInitialized] = useState(false);
@@ -335,37 +191,38 @@
                 };
             }, []); // Dipendenze vuote - si esegue solo al mount
 
+            const events = useMemo(() =>
+                lavori
+                    .filter(lavoro => lavoro.DataConsegna)
+                    .map(lavoro => ({
+                        id: lavoro.id,
+                        title: lavoro.CodicePaziente,
+                        date: lavoro.DataConsegna,
+                        backgroundColor: getEventColor(lavoro),
+                        borderColor: getEventColor(lavoro),
+                        textColor: '#ffffff',
+                        extendedProps: {
+                            laboratorio: lavoro.Laboratorio,
+                            tipoLavoro: lavoro.TipoLavoro,
+                            statoCAD: lavoro.StatoCAD,
+                            statoStampa: lavoro.StatoStampa
+                        }
+                    })),
+                [lavori]
+            );
+
             // Aggiornamento eventi quando cambiano i lavori
             useEffect(() => {
-                if (calendar && calendarInitialized && lavori.length > 0) {
-                    console.log('🔄 Aggiornamento eventi calendario...', lavori.length, 'lavori');
-                    
+                if (calendar && calendarInitialized && events.length > 0) {
+                    console.log('🔄 Aggiornamento eventi calendario...', events.length, 'eventi');
+
                     // Rimuove tutti gli eventi esistenti
                     calendar.removeAllEvents();
-                    
-                    // Crea nuovi eventi
-                    const events = lavori
-                        .filter(lavoro => lavoro.DataConsegna) // Solo lavori con data
-                        .map(lavoro => ({
-                            id: lavoro.id,
-                            title: lavoro.CodicePaziente,
-                            date: lavoro.DataConsegna,
-                            backgroundColor: getEventColor(lavoro),
-                            borderColor: getEventColor(lavoro),
-                            textColor: '#ffffff',
-                            extendedProps: {
-                                laboratorio: lavoro.Laboratorio,
-                                tipoLavoro: lavoro.TipoLavoro,
-                                statoCAD: lavoro.StatoCAD,
-                                statoStampa: lavoro.StatoStampa
-                            }
-                        }));
-                    
+
                     // Aggiunge i nuovi eventi
                     calendar.addEventSource(events);
-                    console.log('✅ Eventi aggiornati:', events.length);
                 }
-            }, [lavori, calendar, calendarInitialized]);
+            }, [events, calendar, calendarInitialized]);
 
             return (
                 <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
@@ -389,10 +246,10 @@
                     <div ref={calendarRef}></div>
                 </div>
             );
-        }
+        });
 
         // ✅ COMPONENTE TIMELINE SEPARATO PER MIGLIORE GESTIONE
-        function TimelineComponent({ lavoro, onToggleStep }) {
+        const TimelineComponent = React.memo(function TimelineComponent({ lavoro, onToggleStep }) {
             function getDaysUntilDelivery(dataConsegna) {
                 if (!dataConsegna) return null;
                 const today = new Date();
@@ -450,8 +307,10 @@
                 }
             }
 
+            const memoizedSteps = useMemo(() => getSteps(lavoro), [lavoro]);
+
             function getStepColor(lavoro, stepNumber) {
-                const steps = getSteps(lavoro);
+                const steps = memoizedSteps;
                 const isCompleted = steps[`step${stepNumber}`];
                 
                 if (lavoro.TipoLavoro === '3D') {
@@ -484,7 +343,7 @@
                 }
             }
 
-            const steps = getSteps(lavoro);
+            const steps = memoizedSteps;
 
             // ✅ TIMELINE DESKTOP (orizzontale)
             const renderDesktopTimeline = () => {
@@ -637,10 +496,10 @@
                     {renderMobileTimeline()}
                 </>
             );
-        }
+        });
 
         // Componente Card Lavoro
-        function CardLavoro({ lavoro, onToggleStep, onUpdateStatus }) {
+        const CardLavoro = React.memo(function CardLavoro({ lavoro, onToggleStep, onUpdateStatus }) {
             function getDaysUntilDelivery(dataConsegna) {
                 if (!dataConsegna) return null;
                 const today = new Date();
@@ -649,7 +508,7 @@
                 return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             }
 
-            const daysUntil = getDaysUntilDelivery(lavoro.DataConsegna);
+            const daysUntil = useMemo(() => getDaysUntilDelivery(lavoro.DataConsegna), [lavoro.DataConsegna]);
 
             return (
                 <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500 card-hover mobile-card-content">
@@ -865,7 +724,7 @@
                     </div>
                 </div>
             );
-        }
+        });
 
         // 🔐 HEADER CON INFORMAZIONI UTENTE
         function UserHeader({ user, onLogout }) {
@@ -1476,10 +1335,3 @@
             return <Dashboard />;
         }
 
-        // 🚀 BOOTSTRAP APPLICAZIONE
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(
-            <AuthProvider>
-                <App />
-            </AuthProvider>
-        );

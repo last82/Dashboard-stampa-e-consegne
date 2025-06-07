@@ -1,0 +1,247 @@
+        body { background: #f9fafb; }
+        .timeline-step {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .timeline-step:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .bg-orange-500 {
+            background-color: #f97316 !important;
+            color: white !important;
+        }
+        .bg-green-500 {
+            background-color: #22c55e !important;
+            color: white !important;
+        }
+        .bg-gray-500 {
+            background-color: #6b7280 !important;
+            color: white !important;
+        }
+        .bg-red-500 {
+            background-color: #ef4444 !important;
+            color: white !important;
+        }
+        .bg-blue-500 {
+            background-color: #3b82f6 !important;
+            color: white !important;
+        }
+        .card-hover {
+            transition: all 0.2s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .fc-event {
+            border-radius: 4px !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            cursor: move !important;
+        }
+        .fc-event:hover {
+            opacity: 0.8 !important;
+        }
+        .fc-day-today {
+            background-color: #dbeafe !important;
+        }
+        
+        /* ✅ LOGIN STYLES - PAGINA BIANCA CON LOGO GRANDE */
+        .login-background {
+            background: #ffffff !important;
+            min-height: 100vh;
+        }
+        
+        .logo-large {
+            max-width: 350px;
+            width: 100%;
+            height: auto;
+            margin-bottom: 2rem;
+        }
+        
+        @media (max-width: 768px) {
+            .logo-large {
+                max-width: 250px;
+            }
+        }
+        
+        /* ✅ RESPONSIVE MOBILE IMPROVEMENTS */
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 0.75rem !important;
+            }
+            
+            .card-hover {
+                margin-bottom: 0.75rem !important;
+            }
+            
+            /* Calendario più compatto su mobile */
+            .fc-toolbar {
+                flex-direction: column !important;
+                gap: 0.5rem !important;
+            }
+            
+            .fc-toolbar-chunk {
+                display: flex !important;
+                justify-content: center !important;
+            }
+            
+            /* Header compatto */
+            .dashboard-header {
+                padding: 0.75rem !important;
+            }
+            
+            .dashboard-title {
+                font-size: 1.25rem !important;
+            }
+            
+            .dashboard-subtitle {
+                font-size: 0.75rem !important;
+            }
+            
+            /* Badge e dropdown responsive */
+            .mobile-badges {
+                flex-wrap: wrap !important;
+                gap: 0.25rem !important;
+            }
+            
+            .mobile-badge {
+                font-size: 0.625rem !important;
+                padding: 0.125rem 0.375rem !important;
+            }
+            
+            .mobile-controls {
+                flex-wrap: wrap !important;
+                gap: 0.25rem !important;
+            }
+            
+            .mobile-dropdown {
+                font-size: 0.625rem !important;
+                padding: 0.25rem 0.375rem !important;
+                min-width: auto !important;
+            }
+            
+            /* Card content più compatto */
+            .mobile-card-content {
+                padding: 0.75rem !important;
+            }
+            
+            .mobile-card-header {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 0.5rem !important;
+            }
+            
+            .mobile-work-info {
+                flex-wrap: wrap !important;
+                gap: 0.25rem !important;
+            }
+            
+            /* ✅ TIMELINE MOBILE - SOLUZIONE A DUE RIGHE COMPATTA */
+            .mobile-timeline-desktop {
+                display: none !important;
+            }
+            
+            .mobile-timeline-mobile {
+                display: block !important;
+                margin: 0.5rem 0 !important;
+            }
+            
+            /* Container a griglia per 2 righe - PIÙ COMPATTO */
+            .mobile-timeline-grid {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                grid-template-rows: repeat(2, auto) !important;
+                gap: 0.4rem !important;
+                align-items: center !important;
+                justify-items: center !important;
+            }
+            
+            .mobile-timeline-grid-3d {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                grid-template-rows: repeat(3, auto) !important;
+                gap: 0.3rem !important;
+                align-items: center !important;
+                justify-items: center !important;
+            }
+            
+            /* Step mobile nella griglia */
+            .mobile-step-grid {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                width: 100% !important;
+            }
+            
+            /* Step 5 per lavori 3D che occupa tutta la larghezza */
+            .mobile-step-full-width {
+                grid-column: 1 / -1 !important;
+            }
+            
+            /* Pallini mobile più piccoli e compatti */
+            .mobile-timeline-step {
+                width: 1.75rem !important;
+                height: 1.75rem !important;
+                font-size: 0.75rem !important;
+                flex-shrink: 0 !important;
+                margin: 0 !important;
+            }
+            
+            /* Label mobile più compatte */
+            .mobile-timeline-label {
+                font-size: 0.625rem !important;
+                text-align: center !important;
+                line-height: 1 !important;
+                margin-top: 0.25rem !important;
+                width: 100% !important;
+                word-wrap: break-word !important;
+                max-width: 3rem !important;
+            }
+            
+            /* Nasconde connettori su mobile */
+            .mobile-timeline-connector {
+                display: none !important;
+            }
+            
+            /* Statistiche più compatte */
+            .mobile-stats {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 0.5rem !important;
+            }
+            
+            .mobile-stat-card {
+                padding: 0.5rem !important;
+            }
+            
+            .mobile-stat-icon {
+                padding: 0.25rem !important;
+            }
+            
+            .mobile-stat-text {
+                font-size: 0.625rem !important;
+            }
+            
+            .mobile-stat-number {
+                font-size: 1.25rem !important;
+            }
+        }
+        
+        /* Timeline desktop normale */
+        @media (min-width: 769px) {
+            .mobile-timeline-desktop {
+                display: flex !important;
+            }
+            
+            .mobile-timeline-mobile {
+                display: none !important;
+            }
+        }

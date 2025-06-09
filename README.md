@@ -11,6 +11,11 @@ partials/   Frammenti HTML riutilizzabili
 index.html  Pagina principale
 ```
 
+## Configurazione Airtable
+Copia `js/config.example.js` in `js/config.js` e inserisci le chiavi del tuo
+account Airtable. Il file `js/config.js` è ignorato da Git per mantenere le
+credenziali riservate.
+
 ## Creazione della struttura
 Per creare la struttura di cartelle da terminale puoi usare i seguenti comandi:
 

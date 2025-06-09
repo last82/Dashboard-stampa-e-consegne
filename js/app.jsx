@@ -28,8 +28,9 @@
         };
 
         // 📊 CONFIGURAZIONE AIRTABLE
-        const AIRTABLE_BASE_ID = 'appkaYhl810WwG7jf';
-        const AIRTABLE_TOKEN = 'patnhoUAqDz44YP5G.bc379a3490a179c8d37c0c9f5ea18d1f0379e901297137c8bc10ede9624b8135';
+        // I parametri Airtable vengono caricati da js/config.js
+        const AIRTABLE_BASE_ID = window.CONFIG?.AIRTABLE_BASE_ID || '';
+        const AIRTABLE_TOKEN = window.CONFIG?.AIRTABLE_TOKEN || '';
         const TIMELINE_TABLE = 'tblWW6GJIxgZR8hp8';
         const PRESCRIZIONI_TABLE = 'tblM2RwtcSmfw7OTs';
 
